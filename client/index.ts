@@ -52,6 +52,8 @@ export class Session {
 	presence: Presence = {};
 	#subscribers = new Set<Subscriber>();
 	#receiving: AbortController | null = null;
+	/** Set by `close`, so that a `join` still on its way starts no receive. */
+	#closed = false;
 
 	constructor(link: string, name: string) {
 		this.link = link.replace(/\/$/, "");
@@ -60,8 +62,9 @@ export class Session {
 
 	/** Joins, and starts receiving. Returns the join entry's number. */
 	async join(): Promise<number> {
+		this.#closed = false;
 		const n = await this.#post("/join");
-		this.#receive();
+		if (!this.#closed) this.#receive();
 		return n;
 	}
 
@@ -73,6 +76,7 @@ export class Session {
 
 	/** Stops receiving without leaving, as when the page closes. */
 	close(): void {
+		this.#closed = true;
 		this.#receiving?.abort();
 		this.#receiving = null;
 	}

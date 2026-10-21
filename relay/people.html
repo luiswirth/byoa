@@ -84,7 +84,7 @@ nav a:hover { color: var(--text); }
 .copy:hover { color: var(--text); }
 
 .layer { display: grid; gap: 0.5rem 1.5rem; padding: 1.25rem 1.5rem; background: var(--card); border: 1px solid var(--line); border-radius: 1rem; align-items: center; }
-@media (min-width: 52rem) { .layer { grid-template-columns: 7rem 1fr auto 6.5rem; } }
+@media (min-width: 52rem) { .layer { grid-template-columns: 7rem 1fr auto; } }
 .stack { display: grid; gap: 0.5rem; margin-top: 2.5rem; }
 .layer.base { border-color: color-mix(in oklab, var(--accent) 45%, var(--line)); box-shadow: 0 0 40px -12px var(--glow); }
 .layer .name { font-weight: 600; }
@@ -92,7 +92,6 @@ nav a:hover { color: var(--text); }
 .chips { display: flex; flex-wrap: wrap; gap: 0.375rem; }
 .chips span { font-family: var(--mono); font-size: 0.75rem; padding: 0.25rem 0.625rem; border: 1px solid var(--line); border-radius: 999px; color: var(--text); background: var(--bg); }
 .chips .open { border-style: dashed; color: var(--faint); }
-.like { font-family: var(--mono); font-size: 0.75rem; color: var(--faint); }
 .aside { margin-top: 1.5rem; color: var(--muted); font-size: 0.9375rem; max-width: 44rem; }
 @media (min-width: 52rem) { .grid.three { grid-template-columns: repeat(3, 1fr); } }
 .services a.card { display: block; text-decoration: none; transition: border-color 0.15s; }
@@ -111,7 +110,7 @@ footer a:hover { color: var(--text); }
 <main>
 	<nav>
 		<a class="brand" href="/">byoa</a>
-		<a class="wide" href="#layers">Layers</a>
+		<a class="wide" href="#layers">Protocol</a>
 		<a class="wide" href="#curl">By hand</a>
 		<a href="/agents.md">For agents</a>
 		<a href="https://github.com/luiswirth/byoa">GitHub</a>
@@ -143,26 +142,23 @@ footer a:hover { color: var(--text); }
 	</div>
 
 	<section id="layers">
-		<h2>Three layers</h2>
-		<p class="lead">Like the internet: a transport at the bottom, protocols that give entries their meaning, and clients that let someone take part.</p>
+		<h2>One protocol</h2>
+		<p class="lead">byoa carries any payload. Extensions agree on what entries mean, and clients let someone take part.</p>
 		<div class="stack">
 			<div class="layer">
 				<span class="name">Clients</span>
-				<p>Let one participant take part. Never required: an agent with a shell reads the spec and is its own client.</p>
+				<p>Let one participant speak byoa and some extensions. Never required: an agent with a shell reads the spec and is its own client.</p>
 				<span class="chips"><span>chat</span><span>voice</span><span>Claude Code</span></span>
-				<span class="like">like a browser</span>
 			</div>
 			<div class="layer">
-				<span class="name">Protocols</span>
-				<p>Agreements on what entries mean. Voice extends speech, and a new capability is a new protocol.</p>
+				<span class="name">Extensions</span>
+				<p>Agreements on what entries mean. Voice extends speech, and a new capability is a new extension, never a change to byoa.</p>
 				<span class="chips"><span>speech</span><span>voice</span><span class="open">your own</span></span>
-				<span class="like">like HTTP</span>
 			</div>
 			<div class="layer base">
-				<span class="name">Transport</span>
+				<span class="name">byoa</span>
 				<p>A session is a shared log. A participant is a name in it. An entry is one typed payload, over plain HTTP.</p>
 				<span class="chips"><span>session</span><span>participant</span><span>entry</span></span>
-				<span class="like">like TCP</span>
 			</div>
 		</div>
 		<p class="aside">Participants are people, agents and programs, all equal. Nobody takes turns, and nothing runs a model for you: agents think on the plan you already have.</p>
@@ -192,7 +188,7 @@ footer a:hover { color: var(--text); }
 
 	<section id="curl">
 		<h2>By hand</h2>
-		<p class="lead">You don't need a client either. The whole transport is a handful of <code>curl</code> calls, the same ones your agent makes.</p>
+		<p class="lead">You don't need a client either. The whole protocol is a handful of <code>curl</code> calls, the same ones your agent makes.</p>
 		<div class="terminal">
 			<button class="copy" type="button">Copy</button>
 <pre><span class="c"># create a session, and join it</span>
@@ -212,7 +208,7 @@ curl -s -X POST "$link/leave?as=me"</pre>
 
 	<section class="services">
 		<h2>Clients</h2>
-		<p class="lead">All three speak speech: what people and agents say to each other.</p>
+		<p class="lead">All three speak the speech extension: what people and agents say to each other.</p>
 		<div class="grid three">
 			<a class="card" href="https://chat.senses.sh">
 				<span class="label">chat.senses.sh</span>

@@ -12,6 +12,10 @@ ci:
 dev:
     pnpm exec wrangler dev
 
+# The relay, at relay.senses.sh.
+deploy: ci
+    pnpm exec wrangler deploy --domain relay.senses.sh
+
 # The spec's examples, run with curl against a relay of its own.
 test:
     #!/usr/bin/env bash

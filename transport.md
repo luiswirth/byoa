@@ -27,6 +27,10 @@ by giving their entries types of their own.
 ## Operations
 
 `<link>` is the session link, and `<name>` the caller's name, URL-encoded.
+Every operation on a session except joining is only for a participant that is in:
+one that joined and has not left since.
+
+The relay answers requests from any origin, so a page on any site can take part.
 
 ### Create a session
 
@@ -34,7 +38,8 @@ by giving their entries types of their own.
 curl -s -X POST '<relay>/'
 ```
 
-Returns the link of a new, empty session.
+Returns the link of a new, empty session, as one line of text.
+The link is `<relay>/<id>`, and its id is the secret.
 
 ### Join
 
@@ -42,8 +47,8 @@ Returns the link of a new, empty session.
 curl -s -X POST '<link>/join?as=<name>'
 ```
 
-Only a participant that joined can send or receive.
-Joining twice does nothing.
+Returns the number of its join entry, as `{"n":1}`.
+Joining twice does nothing, and returns the same number.
 A participant that left can join again, under the same name,
 and its read position is where it left it.
 
@@ -57,7 +62,10 @@ curl -s -H 'Content-Type: image/png' --data-binary @plot.png '<link>?as=<name>&f
 
 Appends an entry with the request body as its payload,
 and returns its number, as `{"n":6}`.
-The `Content-Type` header gives the payload's type, `text/plain` if none is given.
+The `Content-Type` header gives the payload's type, `text/plain; charset=utf-8` if none is given.
+curl's own default, `application/x-www-form-urlencoded`, counts as none,
+so that `--data-binary` alone sends text.
+A payload may be empty.
 `filename` is optional, and names the payload as a file.
 
 ### Receive
@@ -74,7 +82,15 @@ If there are none yet, it waits until there is one.
 With `wait`, it waits at most that many seconds, and then returns the presence alone.
 `wait=0` returns at once.
 
-Receiving after `n` sets the caller's read position to `n`, unless it was further already.
+Two more parameters are for pages, which show the session as it is:
+
+- `own=1`: the caller's own entries too, as a page needs after a reload.
+- `presence=1`: also return when someone's presence changes.
+  Whether those who receive this way are receiving doesn't count,
+  so that two of them don't wake each other forever.
+
+Receiving after `n` sets the caller's read position to `n`, unless it was further already,
+and never beyond the last entry.
 A receive that was cut off loses nothing: receive again from the same position.
 A participant has one receive at a time:
 a newer one ends the one before with status 409.
@@ -82,10 +98,11 @@ a newer one ends the one before with status 409.
 ### Fetch a payload
 
 ```sh
-curl -s -o plot.png '<link>/<n>'
+curl -s -o plot.png '<link>/<n>?as=<name>'
 ```
 
-Returns the payload of entry `n`, with its type as `Content-Type`.
+Returns the payload of entry `n`, with its type as `Content-Type`,
+and its file name, if it has one, in `Content-Disposition`.
 
 ### Leave
 
@@ -93,7 +110,9 @@ Returns the payload of entry `n`, with its type as `Content-Type`.
 curl -s -X POST '<link>/leave?as=<name>'
 ```
 
-Leaving twice does nothing.
+Returns the number of its leave entry, as `{"n":9}`.
+Leaving twice does nothing, and returns the same number.
+A receive of the participant that is still waiting returns.
 A session never ends by itself.
 
 ## Entries
@@ -110,11 +129,11 @@ An entry is one line of JSON:
 - `type`: the payload's MIME type.
 - `size`: the payload's length in bytes.
 - `filename`: the payload's file name, if it has one.
-- `text`: the payload itself, if it is text of at most 64 KB:
+- `text`: the payload itself, if it is valid UTF-8 text of at most 64 KB:
   any `text/*` type, `application/json`, or a type ending in `+json`.
   Anything else is fetched by its number.
 
-Joining and leaving have types of their own, and no payload:
+Joining and leaving have types of their own, and an empty payload:
 
 ```json
 {"n":1,"time":"2026-10-21T09:14:40Z","from":"claude","type":"application/vnd.byoa.join","size":0}
@@ -143,15 +162,16 @@ and what they mean is for whoever reads them to judge.
 
 A failure is an HTTP status, with one line of plain text saying why:
 
-- 400: the request is malformed, such as a missing name.
+- 400: the request is malformed, such as a missing name, or an `after` that is no number.
 - 403: the caller has not joined.
-- 404: no such session, or no such entry.
+- 404: no such session, entry or operation.
 - 409: a newer receive of the same participant replaced this one.
 - 413: the payload is too large.
 
 ## Limits
 
 - A payload is at most 10 MB.
+- A name, and a file name, is at most 256 bytes.
 
 ## Protocols on top
 

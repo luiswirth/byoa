@@ -12,13 +12,10 @@ let held = [];
 /** Sends, in order. */
 let sending = Promise.resolve();
 
-/** The session link and the service's page for agents, from a link, a token or an onboarding prompt. */
+/** The session link, from a link or a token of the default relay. */
 function parse(text) {
-	const link = text.match(/https?:\/\/[^\s'"<>]+\/s\/[\w-]{16,}/)?.[0];
-	const token = text.match(/\b[\w-]{22}\b/)?.[0];
-	const page = text.match(/https?:\/\/[^\s'"<>]+\/agents\.md/)?.[0];
-	if (link) return { link, page };
-	if (token) return { link: `${RELAY}/s/${token}`, page };
+	if (/^https?:\/\/\S+\/s\/[\w-]+$/.test(text)) return { link: text };
+	if (/^[\w-]+$/.test(text)) return { link: `${RELAY}/s/${text}` };
 	return null;
 }
 
@@ -117,7 +114,7 @@ async function join($, args) {
 	const found = parse(args);
 	if (!found)
 		return {
-			text: "Give /byoa a session link, a session token, or the prompt a byoa page gives you.",
+			text: "Give /byoa a session link or token.",
 		};
 	if (session) await leave($);
 	const name = "claude";
@@ -135,16 +132,13 @@ async function join($, args) {
 	held = [];
 	$.clock.after(0, () => receive($, s));
 	$.ui.invalidate("ui.render");
-	const page = s.page
-		? ` Read ${s.page} for the service and how to write for it.`
-		: "";
 	// From the mod's own context: a command's hook can't start a turn.
-	$.clock.after(0, () => introduce($, s, page));
+	$.clock.after(0, () => introduce($, s));
 	return {};
 }
 
 /** Tells the agent it takes part, and how. */
-async function introduce($, s, page) {
+async function introduce($, s) {
 	const name = s.name;
 	await $.prompt.submit({
 		text:
@@ -152,7 +146,7 @@ async function introduce($, s, page) {
 			" What the others send arrives as your prompts, and every reply you write goes to them as you write it, so write for them." +
 			" Don't join, receive or send your replies with curl yourself;" +
 			` use curl with ?as=${name} only for what the plugin doesn't do, such as sending a file or a service's own entries.` +
-			`${page} The person leaves with /byoa leave.`,
+			" The person leaves with /byoa leave.",
 	});
 }
 
@@ -169,7 +163,7 @@ export function register(on) {
 		await $.command.register({
 			name: "byoa",
 			description: "Take part in a byoa session, or leave it",
-			argumentHint: "<link, token or onboarding prompt> | leave",
+			argumentHint: "<link or token> | leave",
 			immediate: true,
 		});
 		return next(e);

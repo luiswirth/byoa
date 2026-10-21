@@ -1,5 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import spec from "../transport.md";
+import people from "./people.html";
 
 const MAX_PAYLOAD = 10 * 1024 * 1024;
 const MAX_INLINE = 64 * 1024;
@@ -469,7 +470,9 @@ async function route(request: Request, env: Env): Promise<Response> {
 	const url = new URL(request.url);
 	const [, first, id] = url.pathname.split("/");
 	if (request.method === "GET" && url.pathname === "/") {
-		return Response.redirect(`${url.origin}/agents.md`, 302);
+		return new Response(people, {
+			headers: { "Content-Type": "text/html; charset=utf-8" },
+		});
 	}
 	if (request.method === "GET" && url.pathname === "/agents.md") {
 		return new Response(spec, {

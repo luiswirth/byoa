@@ -6,7 +6,9 @@
 	"dev": { "port": 8790 },
 	"compatibility_date": "2026-10-01",
 	"compatibility_flags": ["enable_request_signal"],
-	"rules": [{ "type": "Text", "globs": ["**/*.md"], "fallthrough": true }],
+	"rules": [
+		{ "type": "Text", "globs": ["**/*.md", "**/*.html"], "fallthrough": true }
+	],
 	"durable_objects": {
 		"bindings": [{ "name": "SESSION", "class_name": "Session" }]
 	},

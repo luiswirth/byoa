@@ -307,7 +307,13 @@ export class Session extends DurableObject<Env> {
 	async payload(n: number): Promise<Response> {
 		const [row] = this.sql("SELECT * FROM entries WHERE n = ?", n);
 		if (!row) return fail(404, "no such entry");
-		const headers = new Headers({ "Content-Type": String(row.type) });
+		// The type is the sender's: a payload opened as a page, such as HTML,
+		// runs in a sandbox of its own, never as the relay's site.
+		const headers = new Headers({
+			"Content-Type": String(row.type),
+			"Content-Security-Policy": "sandbox",
+			"X-Content-Type-Options": "nosniff",
+		});
 		if (row.filename !== null) {
 			headers.set(
 				"Content-Disposition",

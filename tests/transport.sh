@@ -48,6 +48,7 @@ check "presence last" "$(tail -1 <<<"$received" | jq -c '.presence | keys')" '["
 curl -s -o "$work/fetched.png" "$link/5?as=claude"
 check "fetch a payload" "$(cmp -s "$work/plot.png" "$work/fetched.png" && echo same)" same
 check "fetch a type" "$(curl -s -o /dev/null -w '%{content_type}' "$link/4?as=claude")" "text/markdown"
+check "a payload in a sandbox" "$(curl -s -o /dev/null -w '%header{content-security-policy}' "$link/5?as=claude")" sandbox
 check "fetch unjoined" "$(status "$link/5?as=nobody")" 403
 check "fetch a join" "$(curl -s "$link/1?as=claude" | wc -c)" 0
 

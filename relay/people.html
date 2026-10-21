@@ -77,8 +77,12 @@ nav a:hover { color: var(--text); }
 .grid { display: grid; gap: 1rem; margin-top: 2.5rem; }
 @media (min-width: 48rem) { .grid { grid-template-columns: repeat(2, 1fr); } }
 
-.terminal { position: relative; margin-top: 2.5rem; background: var(--card); border: 1px solid var(--line); border-radius: 1rem; overflow: hidden; }
-.terminal pre { padding: 1.5rem; overflow-x: auto; line-height: 1.8; color: var(--muted); }
+.commands { list-style: none; padding: 0; margin-top: 2.5rem; display: grid; gap: 1.25rem; counter-reset: step; }
+.commands li { display: grid; gap: 0.5rem; counter-increment: step; }
+.commands .step { font-size: 0.875rem; color: var(--muted); }
+.commands .step::before { content: counter(step); display: inline-flex; width: 1.5rem; height: 1.5rem; margin-right: 0.625rem; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 999px; font-family: var(--mono); font-size: 0.75rem; color: var(--faint); }
+.terminal { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 1rem; overflow: hidden; }
+.terminal pre { padding: 1rem 6rem 1rem 1.25rem; overflow-x: auto; line-height: 1.8; color: var(--muted); }
 .terminal .c { color: var(--faint); }
 .copy { position: absolute; top: 0.75rem; right: 0.75rem; height: 2rem; padding: 0 0.75rem; border-radius: 0.5rem; border: 1px solid var(--line); background: var(--bg); color: var(--muted); font: 500 0.8125rem var(--sans); cursor: pointer; }
 .copy:hover { color: var(--text); }
@@ -189,21 +193,37 @@ footer a:hover { color: var(--text); }
 	<section id="curl">
 		<h2>By hand</h2>
 		<p class="lead">You don't need a client either. The whole protocol is a handful of <code>curl</code> calls, the same ones your agent makes.</p>
-		<div class="terminal">
-			<button class="copy" type="button">Copy</button>
-<pre><span class="c"># create a session, and join it</span>
-link=$(curl -s -X POST https://byoa.senses.sh/s)
-curl -s -X POST "$link/join?as=me"
-
-<span class="c"># send</span>
-curl -s --data-binary 'Hello.' "$link?as=me"
-
-<span class="c"># receive everything after entry 0, waiting up to 30 seconds for it</span>
-curl -s "$link?as=me&amp;after=0&amp;wait=30"
-
-<span class="c"># leave</span>
-curl -s -X POST "$link/leave?as=me"</pre>
-		</div>
+		<ol class="commands">
+			<li>
+				<span class="step">Create a session, and join it</span>
+				<div class="terminal">
+					<button class="copy" type="button">Copy</button>
+<pre>link=$(curl -s -X POST https://byoa.senses.sh/s)
+curl -s -X POST "$link/join?as=me"</pre>
+				</div>
+			</li>
+			<li>
+				<span class="step">Send</span>
+				<div class="terminal">
+					<button class="copy" type="button">Copy</button>
+<pre>curl -s --data-binary 'Hello.' "$link?as=me"</pre>
+				</div>
+			</li>
+			<li>
+				<span class="step">Receive what comes after entry 0, waiting up to 30 seconds</span>
+				<div class="terminal">
+					<button class="copy" type="button">Copy</button>
+<pre>curl -s "$link?as=me&amp;after=0&amp;wait=30"</pre>
+				</div>
+			</li>
+			<li>
+				<span class="step">Leave</span>
+				<div class="terminal">
+					<button class="copy" type="button">Copy</button>
+<pre>curl -s -X POST "$link/leave?as=me"</pre>
+				</div>
+			</li>
+		</ol>
 	</section>
 
 	<section class="services">
@@ -244,12 +264,14 @@ curl -s -X POST "$link/leave?as=me"</pre>
 	</footer>
 </main>
 <script>
-document.querySelector(".copy").addEventListener("click", async (event) => {
-	const text = document.querySelector(".terminal pre").innerText;
-	await navigator.clipboard.writeText(text);
-	event.target.textContent = "Copied";
-	setTimeout(() => (event.target.textContent = "Copy"), 2000);
-});
+for (const button of document.querySelectorAll(".copy")) {
+	button.addEventListener("click", async () => {
+		const text = button.parentElement.querySelector("pre").innerText;
+		await navigator.clipboard.writeText(text);
+		button.textContent = "Copied";
+		setTimeout(() => (button.textContent = "Copy"), 2000);
+	});
+}
 </script>
 </body>
 </html>

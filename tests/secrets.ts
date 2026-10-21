@@ -1,7 +1,7 @@
 // The spec's secrets: the client's public key, openssl encrypting to it as
 // the spec shows, and the client opening the result.
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SECRET, Secrets } from "../client/index.ts";
@@ -35,6 +35,7 @@ const entry = (key: number) => ({
 });
 const opened = await secrets.open(entry(key));
 const other = await secrets.open(entry(key + 1));
+rmSync(work, { recursive: true });
 const ok =
 	opened?.name === "elevenlabs" &&
 	opened.value === "sk_0123456789abcdef" &&

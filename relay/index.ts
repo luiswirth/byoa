@@ -3,8 +3,8 @@ import spec from "../transport.md";
 
 const MAX_PAYLOAD = 10 * 1024 * 1024;
 const MAX_INLINE = 64 * 1024;
-/** How long a session lasts without a new entry. */
-const IDLE = 30 * 24 * 60 * 60 * 1000;
+/** How long a session lasts with nobody using it, receiving included. */
+const IDLE = 24 * 60 * 60 * 1000;
 const MAX_NAME = 256;
 const DEFAULT_TYPE = "text/plain; charset=utf-8";
 const JOIN = "application/vnd.byoa.join";
@@ -148,13 +148,15 @@ export class Session extends DurableObject<Env> {
 		void this.expire();
 	}
 
-	/** The session ends `IDLE` after its last entry, or its creation. */
+	/** The session ends `IDLE` after its last request, unless someone is
+	 * still receiving then. */
 	expire(): Promise<void> {
 		return this.ctx.storage.setAlarm(Date.now() + IDLE);
 	}
 
 	override async alarm(): Promise<void> {
-		await this.end();
+		if (this.receives.size > 0) await this.expire();
+		else await this.end();
 	}
 
 	/** Deletes the session, payloads and all. Receives still waiting return,
@@ -181,6 +183,7 @@ export class Session extends DurableObject<Env> {
 		if (this.sql("SELECT 1 FROM session").length === 0) {
 			return fail(404, "no such session");
 		}
+		void this.expire();
 		const url = new URL(request.url);
 		const [, , operation, ...rest] = url.pathname.split("/");
 		const name = url.searchParams.get("as");
@@ -298,7 +301,6 @@ export class Session extends DurableObject<Env> {
 			object,
 		);
 		for (const receive of this.receives.values()) receive.wake();
-		void this.expire();
 		return Number(row?.n);
 	}
 

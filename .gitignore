@@ -2,3 +2,5 @@ node_modules/
 .direnv/
 .wrangler/
 relay/env.d.ts
+claude-code/tsconfig.json
+claude-code/.claude-plugin/types/

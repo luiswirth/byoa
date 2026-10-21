@@ -1,0 +1,11 @@
+{
+	"name": "byoa",
+	"owner": { "name": "Luis Wirth" },
+	"plugins": [
+		{
+			"name": "byoa",
+			"source": "./claude-code",
+			"description": "Takes part in a byoa session for the agent of this Claude Code session"
+		}
+	]
+}

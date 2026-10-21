@@ -6,6 +6,7 @@ ci:
     pnpm types
     pnpm exec tsc -p relay
     pnpm exec tsc -p client
+    pnpm exec tsc -p onboard
     just test
 
 # The relay, locally, on port 8790.

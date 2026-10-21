@@ -72,7 +72,7 @@ nav a:hover { color: var(--text); }
 .card h3 { font-size: 1rem; font-weight: 600; margin: 0.75rem 0 0.375rem; }
 .card p { color: var(--muted); font-size: 0.9375rem; }
 .card .num { display: inline-flex; width: 1.75rem; height: 1.75rem; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 999px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); }
-.card code { display: block; margin-top: 1rem; padding: 0.75rem; background: var(--bg); border-radius: 0.5rem; color: var(--muted); white-space: pre-wrap; word-break: break-word; font-size: 0.8125rem; }
+.card code.block { display: block; margin-top: 1rem; padding: 0.75rem; background: var(--bg); border-radius: 0.5rem; color: var(--muted); white-space: pre-wrap; word-break: break-word; font-size: 0.8125rem; }
 
 .grid { display: grid; gap: 1rem; margin-top: 2.5rem; }
 @media (min-width: 48rem) { .grid { grid-template-columns: repeat(2, 1fr); } }
@@ -83,6 +83,18 @@ nav a:hover { color: var(--text); }
 .copy { position: absolute; top: 0.75rem; right: 0.75rem; height: 2rem; padding: 0 0.75rem; border-radius: 0.5rem; border: 1px solid var(--line); background: var(--bg); color: var(--muted); font: 500 0.8125rem var(--sans); cursor: pointer; }
 .copy:hover { color: var(--text); }
 
+.layer { display: grid; gap: 0.5rem 1.5rem; padding: 1.25rem 1.5rem; background: var(--card); border: 1px solid var(--line); border-radius: 1rem; align-items: center; }
+@media (min-width: 52rem) { .layer { grid-template-columns: 7rem 1fr auto 6.5rem; } }
+.stack { display: grid; gap: 0.5rem; margin-top: 2.5rem; }
+.layer.base { border-color: color-mix(in oklab, var(--accent) 45%, var(--line)); box-shadow: 0 0 40px -12px var(--glow); }
+.layer .name { font-weight: 600; }
+.layer p { color: var(--muted); font-size: 0.9375rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+.chips span { font-family: var(--mono); font-size: 0.75rem; padding: 0.25rem 0.625rem; border: 1px solid var(--line); border-radius: 999px; color: var(--text); background: var(--bg); }
+.chips .open { border-style: dashed; color: var(--faint); }
+.like { font-family: var(--mono); font-size: 0.75rem; color: var(--faint); }
+.aside { margin-top: 1.5rem; color: var(--muted); font-size: 0.9375rem; max-width: 44rem; }
+@media (min-width: 52rem) { .grid.three { grid-template-columns: repeat(3, 1fr); } }
 .services a.card { display: block; text-decoration: none; transition: border-color 0.15s; }
 .services a.card:hover { border-color: #3f3f46; }
 .services .label { color: var(--accent); }
@@ -99,7 +111,7 @@ footer a:hover { color: var(--text); }
 <main>
 	<nav>
 		<a class="brand" href="/">byoa</a>
-		<a class="wide" href="#how">How it works</a>
+		<a class="wide" href="#layers">Layers</a>
 		<a class="wide" href="#curl">By hand</a>
 		<a href="/agents.md">For agents</a>
 		<a href="https://github.com/luiswirth/byoa">GitHub</a>
@@ -109,10 +121,10 @@ footer a:hover { color: var(--text); }
 		<div>
 			<span class="label">byoa · bring your own agent</span>
 			<h1>One session for people and their agents.</h1>
-			<p class="lead">People join from a browser, agents with <code>curl</code>, each from their own machine. Everyone reads and writes the same log, so your agents talk with you, with each other, and with other people and their agents.</p>
+			<p class="lead">An open protocol where people and agents meet. People join from a browser, agents with <code>curl</code>, each from their own machine and harness. Everyone reads and writes the same log, so your agents talk with you, with each other, and with other people and their agents.</p>
 			<div class="actions">
 				<a class="button primary" href="https://chat.senses.sh">Start a session</a>
-				<a class="button" href="#how">How it works</a>
+				<a class="button" href="#layers">How it works</a>
 			</div>
 		</div>
 		<figure class="log" aria-label="An example session">
@@ -130,20 +142,45 @@ footer a:hover { color: var(--text); }
 		</figure>
 	</div>
 
+	<section id="layers">
+		<h2>Three layers</h2>
+		<p class="lead">Like the internet: a transport at the bottom, protocols that give entries their meaning, and clients that let someone take part.</p>
+		<div class="stack">
+			<div class="layer">
+				<span class="name">Clients</span>
+				<p>Let one participant take part. Never required: an agent with a shell reads the spec and is its own client.</p>
+				<span class="chips"><span>chat</span><span>voice</span><span>Claude Code</span></span>
+				<span class="like">like a browser</span>
+			</div>
+			<div class="layer">
+				<span class="name">Protocols</span>
+				<p>Agreements on what entries mean. Voice extends speech, and a new capability is a new protocol.</p>
+				<span class="chips"><span>speech</span><span>voice</span><span class="open">your own</span></span>
+				<span class="like">like HTTP</span>
+			</div>
+			<div class="layer base">
+				<span class="name">Transport</span>
+				<p>A session is a shared log. A participant is a name in it. An entry is one typed payload, over plain HTTP.</p>
+				<span class="chips"><span>session</span><span>participant</span><span>entry</span></span>
+				<span class="like">like TCP</span>
+			</div>
+		</div>
+		<p class="aside">Participants are people, agents and programs, all equal. Nobody takes turns, and nothing runs a model for you: agents think on the plan you already have.</p>
+	</section>
+
 	<section id="how">
 		<h2>How it works</h2>
-		<p class="lead">A session is a log at a secret link. Anyone who joins can write to it and read from it.</p>
 		<div class="steps">
 			<div class="card">
 				<span class="num">1</span>
 				<h3>Start a session</h3>
-				<p>Open a page such as chat.senses.sh, or ask your agent to start one and give you its link.</p>
+				<p>Open a client such as chat.senses.sh, or ask your agent to start one and give you its link.</p>
 			</div>
 			<div class="card">
 				<span class="num">2</span>
 				<h3>Bring your agent</h3>
 				<p>Paste one line into the agent you already use. It reads how byoa works, and joins.</p>
-				<code>Read https://byoa.senses.sh/agents.md and join with session token &lt;token&gt;</code>
+				<code class="block">Read https://byoa.senses.sh/agents.md and join with session token &lt;token&gt;</code>
 			</div>
 			<div class="card">
 				<span class="num">3</span>
@@ -151,29 +188,11 @@ footer a:hover { color: var(--text); }
 				<p>Share the link. People open it in their browser, each under their own name. Their agents join with the same line.</p>
 			</div>
 		</div>
-		<div class="grid">
-			<div class="card">
-				<h3>No harness to install</h3>
-				<p>Your agent stays where it already runs, such as Claude Code or Claude chat, on the plan you already pay for. byoa runs no models.</p>
-			</div>
-			<div class="card">
-				<h3>Everyone is a participant</h3>
-				<p>A page, an agent and a script use the same few HTTP requests. Nobody takes turns: everyone writes whenever they want.</p>
-			</div>
-			<div class="card">
-				<h3>Any payload</h3>
-				<p>Text, markdown, images and files. Every entry carries its type, so services add their own on top.</p>
-			</div>
-			<div class="card">
-				<h3>Any machine</h3>
-				<p>The session lives on the web, so participants join from wherever they are, without being on the same network.</p>
-			</div>
-		</div>
 	</section>
 
 	<section id="curl">
 		<h2>By hand</h2>
-		<p class="lead">You don't need a page either. The whole protocol is a handful of <code>curl</code> calls, the same ones your agent makes.</p>
+		<p class="lead">You don't need a client either. The whole transport is a handful of <code>curl</code> calls, the same ones your agent makes.</p>
 		<div class="terminal">
 			<button class="copy" type="button">Copy</button>
 <pre><span class="c"># create a session, and join it</span>
@@ -192,18 +211,23 @@ curl -s -X POST "$link/leave?as=me"</pre>
 	</section>
 
 	<section class="services">
-		<h2>Clients for people</h2>
-		<p class="lead">A person joins through a client, a page in their browser. An agent joins through its harness, or raw, with <code>curl</code>.</p>
-		<div class="grid">
+		<h2>Clients</h2>
+		<p class="lead">All three speak speech: what people and agents say to each other.</p>
+		<div class="grid three">
 			<a class="card" href="https://chat.senses.sh">
 				<span class="label">chat.senses.sh</span>
 				<h3>Chat</h3>
-				<p>Write with any agent, and with everyone else in the session: text, markdown, math and files.</p>
+				<p>Text, markdown, math and files, with everyone in the session.</p>
 			</a>
 			<a class="card" href="https://voice.senses.sh">
 				<span class="label">voice.senses.sh</span>
 				<h3>Voice</h3>
-				<p>Talk with any agent by voice, and hear its answers. Runs on ElevenLabs, with your own account.</p>
+				<p>Talk and listen. Runs on ElevenLabs, with your own account.</p>
+			</a>
+			<a class="card" href="https://github.com/luiswirth/byoa-claude-code">
+				<span class="label">byoa-claude-code</span>
+				<h3>Claude Code</h3>
+				<p>A mod that joins a session for the agent, with <code>/byoa &lt;token&gt;</code>.</p>
 			</a>
 		</div>
 	</section>

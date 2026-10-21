@@ -185,7 +185,7 @@ export class Session extends DurableObject<Env> {
 		}
 		void this.expire();
 		const url = new URL(request.url);
-		const [, , operation, ...rest] = url.pathname.split("/");
+		const [, , , operation, ...rest] = url.pathname.split("/");
 		const name = url.searchParams.get("as");
 		if (!name) return fail(400, "name yourself with ?as=<name>");
 		if (bytes(name) > MAX_NAME) {
@@ -461,21 +461,23 @@ const newId = () => {
 
 async function route(request: Request, env: Env): Promise<Response> {
 	const url = new URL(request.url);
-	const [, id] = url.pathname.split("/");
+	const [, first, id] = url.pathname.split("/");
+	if (request.method === "GET" && url.pathname === "/") {
+		return Response.redirect(`${url.origin}/agents.md`, 302);
+	}
+	if (request.method === "GET" && url.pathname === "/agents.md") {
+		return new Response(spec, {
+			headers: { "Content-Type": "text/markdown; charset=utf-8" },
+		});
+	}
+	if (first !== "s") return fail(404, "no such page");
 	if (!id) {
-		if (request.method === "GET") {
-			return new Response(spec, {
-				headers: { "Content-Type": "text/markdown; charset=utf-8" },
-			});
-		}
-		if (request.method === "POST") {
-			const fresh = newId();
-			await env.SESSION.getByName(fresh).create();
-			return new Response(`${url.origin}/${fresh}\n`, {
-				headers: { "Content-Type": "text/plain; charset=utf-8" },
-			});
-		}
-		return fail(404, "no such operation");
+		if (request.method !== "POST") return fail(404, "no such operation");
+		const fresh = newId();
+		await env.SESSION.getByName(fresh).create();
+		return new Response(`${url.origin}/s/${fresh}\n`, {
+			headers: { "Content-Type": "text/plain; charset=utf-8" },
+		});
 	}
 	if (!/^[\w-]{22}$/.test(id)) return fail(404, "no such session");
 	return env.SESSION.getByName(id).fetch(request);

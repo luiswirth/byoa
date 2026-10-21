@@ -39,11 +39,11 @@ The relay answers requests from any origin, so a page on any site can take part.
 ### Create a session
 
 ```sh
-curl -s -X POST '<relay>/'
+curl -s -X POST '<relay>/s'
 ```
 
 Returns the link of a new, empty session, as one line of text.
-The link is `<relay>/<id>`, and its id is the secret.
+The link is `<relay>/s/<token>`, and its token is the secret.
 
 ### Join
 

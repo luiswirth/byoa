@@ -20,13 +20,13 @@ status() {
 }
 
 for _ in $(seq 60); do
-  curl -sf -o /dev/null "$relay/" && break
+  curl -sf -o /dev/null "$relay/agents.md" && break
   sleep 0.5
 done
 
-check "the spec at /" "$(curl -s "$relay/" | head -1)" "# The byoa transport"
+check "the spec at /agents.md" "$(curl -s "$relay/agents.md" | head -1)" "# The byoa transport"
 
-link=$(curl -s -X POST "$relay/")
+link=$(curl -s -X POST "$relay/s")
 check "create" "$(status -X POST "$link/join?as=luis")" 200
 check "join twice" "$(curl -s -X POST "$link/join?as=luis")" '{"n":1}'
 check "send unjoined" "$(status --data-binary 'Hi.' "$link?as=claude")" 403
@@ -91,7 +91,7 @@ check "read position kept" "$(curl -s "$link?as=claude&after=0&wait=0" | tail -1
 
 check "no name" "$(status "$link?wait=0")" 400
 check "bad after" "$(status "$link?as=luis&after=x")" 400
-check "no session" "$(status "$relay/AAAAAAAAAAAAAAAAAAAAAA?as=luis")" 404
+check "no session" "$(status "$relay/s/AAAAAAAAAAAAAAAAAAAAAA?as=luis")" 404
 check "no entry" "$(status "$link/99?as=luis")" 404
 head -c 10485761 /dev/zero >"$work/large"
 check "too large" "$(status --data-binary @"$work/large" "$link?as=luis")" 413

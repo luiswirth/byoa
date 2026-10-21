@@ -12,6 +12,9 @@ by giving their entries types of their own.
 
 - A session is one log, reached by its link.
   The link is a secret: whoever holds it can act in the session.
+- A session ends when the last participant in it leaves,
+  or 30 days after its last entry.
+  Then it is deleted, payloads and all, and its link leads nowhere.
 - A participant is a name.
   It joins the session, sends and receives, and leaves.
 - The log is a sequence of entries, numbered from 1.
@@ -50,7 +53,8 @@ curl -s -X POST '<link>/join?as=<name>'
 Returns the number of its join entry, as `{"n":1}`.
 Joining twice does nothing, and returns the same number.
 A participant that left can join again, under the same name,
-and its read position is where it left it.
+and its read position is where it left it,
+as long as the session has not ended.
 
 ### Send
 
@@ -113,7 +117,7 @@ curl -s -X POST '<link>/leave?as=<name>'
 Returns the number of its leave entry, as `{"n":9}`.
 Leaving twice does nothing, and returns the same number.
 A receive of the participant that is still waiting returns.
-A session never ends by itself.
+The last participant to leave ends the session.
 
 ## Entries
 

@@ -3,6 +3,8 @@ import spec from "../transport.md";
 
 const MAX_PAYLOAD = 10 * 1024 * 1024;
 const MAX_INLINE = 64 * 1024;
+/** How long a session lasts without a new entry. */
+const IDLE = 30 * 24 * 60 * 60 * 1000;
 const MAX_NAME = 256;
 const DEFAULT_TYPE = "text/plain; charset=utf-8";
 const JOIN = "application/vnd.byoa.join";
@@ -111,6 +113,10 @@ export class Session extends DurableObject<Env> {
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
+		this.schema();
+	}
+
+	schema(): void {
 		this.ctx.storage.sql.exec(`
 			CREATE TABLE IF NOT EXISTS session (created TEXT NOT NULL);
 			CREATE TABLE IF NOT EXISTS entries (
@@ -139,6 +145,36 @@ export class Session extends DurableObject<Env> {
 
 	create(): void {
 		this.sql("INSERT INTO session (created) VALUES (?)", now());
+		void this.expire();
+	}
+
+	/** The session ends `IDLE` after its last entry, or its creation. */
+	expire(): Promise<void> {
+		return this.ctx.storage.setAlarm(Date.now() + IDLE);
+	}
+
+	override async alarm(): Promise<void> {
+		await this.end();
+	}
+
+	/** Deletes the session, payloads and all. Receives still waiting return,
+	 * and the next request finds no session. */
+	async end(): Promise<void> {
+		const prefix = `${this.ctx.id}/`;
+		for (let cursor: string | undefined; ; ) {
+			const listed = await this.env.PAYLOADS.list({
+				prefix,
+				...(cursor !== undefined && { cursor }),
+			});
+			const keys = listed.objects.map((object) => object.key);
+			if (keys.length > 0) await this.env.PAYLOADS.delete(keys);
+			if (!listed.truncated) break;
+			cursor = listed.cursor;
+		}
+		await this.ctx.storage.deleteAlarm();
+		await this.ctx.storage.deleteAll();
+		this.schema();
+		for (const receive of this.receives.values()) receive.wake();
 	}
 
 	override async fetch(request: Request): Promise<Response> {
@@ -156,7 +192,7 @@ export class Session extends DurableObject<Env> {
 		const get = request.method === "GET";
 		if (rest.length > 0) return fail(404, "no such operation");
 		if (operation === "join" && post) return this.join(name);
-		if (operation === "leave" && post) return this.leave(name);
+		if (operation === "leave" && post) return await this.leave(name);
 		if (!this.inside(name)) return fail(403, "you have not joined");
 		if (!operation && post) return this.send(name, request, url);
 		if (!operation && get) return this.receive(name, request, url);
@@ -191,7 +227,8 @@ export class Session extends DurableObject<Env> {
 		return number(n);
 	}
 
-	leave(name: string): Response {
+	/** The last to leave ends the session. */
+	async leave(name: string): Promise<Response> {
 		const known = this.participant(name);
 		if (!known) return fail(403, "you have not joined");
 		if (known.inside === 0) return number(known.entry);
@@ -202,6 +239,9 @@ export class Session extends DurableObject<Env> {
 			name,
 		);
 		this.receives.get(name)?.wake();
+		if (this.sql("SELECT 1 FROM participants WHERE inside = 1").length === 0) {
+			await this.end();
+		}
 		return number(n);
 	}
 
@@ -258,6 +298,7 @@ export class Session extends DurableObject<Env> {
 			object,
 		);
 		for (const receive of this.receives.values()) receive.wake();
+		void this.expire();
 		return Number(row?.n);
 	}
 

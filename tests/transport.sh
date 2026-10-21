@@ -97,5 +97,10 @@ head -c 10485761 /dev/zero >"$work/large"
 check "too large" "$(status --data-binary @"$work/large" "$link?as=luis")" 413
 check "any origin" "$(curl -s -o /dev/null -w '%header{access-control-allow-origin}' -X OPTIONS "$link")" '*'
 
+curl -s -X POST "$link/leave?as=luis" >/dev/null
+check "one left inside" "$(status "$link/5?as=claude")" 200
+curl -s -X POST "$link/leave?as=claude" >/dev/null
+check "the last to leave ends it" "$(status -X POST "$link/join?as=claude")" 404
+
 trash "$work"
 exit "$failed"

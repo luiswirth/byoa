@@ -25,13 +25,71 @@ const STEPS = [
 	["Open", "the link your agent gives you. It sets up everything else."],
 ] as const;
 
-export function Onboard({
+const NAME = "byoa-name";
+
+/** Asks the person for the name they take part under, once per browser, and
+ * renders the page under it. Every person in a session has a name of their
+ * own, as every agent has. */
+export function Named({
+	service,
+	children,
+}: {
+	/** The service, as the person knows it, such as `voice.senses.sh`. */
+	service: string;
+	children: (name: string) => ReactNode;
+}) {
+	const [name, setName] = useState(() => localStorage.getItem(NAME));
+	const [draft, setDraft] = useState("");
+	if (name) return children(name);
+	const chosen = draft.trim();
+	return (
+		<Frame
+			name={service}
+			title="What's your name?"
+			description="Everyone in the session, people and agents, sees you under it."
+		>
+			<form
+				className="flex flex-col gap-2 rounded-2xl border bg-card/60 p-2 shadow-2xl shadow-black/20 backdrop-blur sm:flex-row"
+				onSubmit={(event) => {
+					event.preventDefault();
+					if (!chosen) return;
+					localStorage.setItem(NAME, chosen);
+					setName(chosen);
+				}}
+			>
+				<input
+					// biome-ignore lint/a11y/noAutofocus: the one thing on the page
+					autoFocus
+					className="h-11 flex-1 rounded-xl bg-background/80 px-4 text-base outline-none placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+					placeholder="Your name"
+					maxLength={64}
+					value={draft}
+					onChange={(event) => setDraft(event.target.value)}
+				/>
+				<button
+					type="submit"
+					disabled={!chosen}
+					className="h-11 rounded-xl bg-primary px-6 font-medium text-primary-foreground transition-all outline-none hover:bg-primary/85 focus-visible:ring-3 focus-visible:ring-ring/50 active:translate-y-px disabled:opacity-50"
+				>
+					Continue
+				</button>
+			</form>
+		</Frame>
+	);
+}
+
+/** The look every page of a person's onboarding shares. */
+function Frame({
 	name,
 	title,
 	description,
-	prompt,
-	note,
-}: OnboardProps) {
+	children,
+}: {
+	name: string;
+	title: string;
+	description: string;
+	children: ReactNode;
+}) {
 	return (
 		<div className="relative flex min-h-dvh items-center justify-center overflow-hidden px-6 py-16">
 			<div
@@ -54,33 +112,11 @@ export function Onboard({
 						{description}
 					</p>
 				</header>
-				<section className="flex flex-col gap-2 rounded-2xl border bg-card/60 p-2 shadow-2xl shadow-black/20 backdrop-blur">
-					<span className="px-2 pt-1 text-xs font-medium text-muted-foreground">
-						Give your agent this
-					</span>
-					<pre className="rounded-xl bg-background/80 p-4 font-mono text-sm leading-relaxed whitespace-pre-wrap">
-						{prompt}
-					</pre>
-					<Copy text={prompt} />
-				</section>
-				<ol className="grid gap-5 sm:grid-cols-3">
-					{STEPS.map(([verb, rest], i) => (
-						<li key={verb} className="flex gap-3 text-sm sm:flex-col sm:gap-2">
-							<span className="flex size-6 shrink-0 items-center justify-center rounded-full border font-mono text-xs text-muted-foreground">
-								{i + 1}
-							</span>
-							<span className="text-muted-foreground">
-								<span className="font-medium text-foreground">{verb}</span>{" "}
-								{rest}
-							</span>
-						</li>
-					))}
-				</ol>
-				{note && <p className="text-sm text-muted-foreground">{note}</p>}
+				{children}
 				<footer className="text-xs text-muted-foreground">
 					<a
 						className="underline-offset-4 hover:text-foreground hover:underline"
-						href="https://github.com/luiswirth/byoa"
+						href="https://byoa.senses.sh"
 					>
 						byoa
 					</a>
@@ -88,6 +124,41 @@ export function Onboard({
 				</footer>
 			</div>
 		</div>
+	);
+}
+
+export function Onboard({
+	name,
+	title,
+	description,
+	prompt,
+	note,
+}: OnboardProps) {
+	return (
+		<Frame name={name} title={title} description={description}>
+			<section className="flex flex-col gap-2 rounded-2xl border bg-card/60 p-2 shadow-2xl shadow-black/20 backdrop-blur">
+				<span className="px-2 pt-1 text-xs font-medium text-muted-foreground">
+					Give your agent this
+				</span>
+				<pre className="rounded-xl bg-background/80 p-4 font-mono text-sm leading-relaxed whitespace-pre-wrap">
+					{prompt}
+				</pre>
+				<Copy text={prompt} />
+			</section>
+			<ol className="grid gap-5 sm:grid-cols-3">
+				{STEPS.map(([verb, rest], i) => (
+					<li key={verb} className="flex gap-3 text-sm sm:flex-col sm:gap-2">
+						<span className="flex size-6 shrink-0 items-center justify-center rounded-full border font-mono text-xs text-muted-foreground">
+							{i + 1}
+						</span>
+						<span className="text-muted-foreground">
+							<span className="font-medium text-foreground">{verb}</span> {rest}
+						</span>
+					</li>
+				))}
+			</ol>
+			{note && <p className="text-sm text-muted-foreground">{note}</p>}
+		</Frame>
 	);
 }
 

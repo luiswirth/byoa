@@ -13,9 +13,9 @@ ci:
 dev:
     pnpm exec wrangler dev
 
-# The relay, at relay.senses.sh.
+# The relay, at byoa.senses.sh.
 deploy: ci
-    pnpm exec wrangler deploy --domain relay.senses.sh
+    pnpm exec wrangler deploy --domain byoa.senses.sh
 
 # The spec's examples, run with curl against a relay of its own.
 test:

@@ -12,9 +12,9 @@ export type OnboardProps = {
 	title: string;
 	/** One or two sentences on it. */
 	description: string;
-	/** What the person gives their agent: short, pointing at the service's
-	 * page for agents. */
-	prompt: string;
+	/** The session's token. The page offers it on its own, and in the prompt
+	 * that points the agent at the service's page for agents. */
+	token: string;
 	/** What the person should know before, such as an account it needs. */
 	note?: ReactNode;
 };
@@ -131,9 +131,10 @@ export function Onboard({
 	name,
 	title,
 	description,
-	prompt,
+	token,
 	note,
 }: OnboardProps) {
+	const prompt = `Read ${location.origin}/agents.md and join with session token ${token}`;
 	return (
 		<Frame name={name} title={title} description={description}>
 			<section className="flex flex-col gap-2 rounded-2xl border bg-card/60 p-2 shadow-2xl shadow-black/20 backdrop-blur">
@@ -143,7 +144,16 @@ export function Onboard({
 				<pre className="rounded-xl bg-background/80 p-4 font-mono text-sm leading-relaxed whitespace-pre-wrap">
 					{prompt}
 				</pre>
-				<Copy text={prompt} />
+				<Copy text={prompt} label="Copy the prompt" primary />
+			</section>
+			<section className="flex flex-col gap-2 rounded-2xl border bg-card/40 p-2 sm:flex-row sm:items-center">
+				<div className="flex min-w-0 flex-1 flex-col px-2 py-1">
+					<span className="text-xs font-medium text-muted-foreground">
+						Session token
+					</span>
+					<code className="truncate font-mono text-sm">{token}</code>
+				</div>
+				<Copy text={token} label="Copy the token" />
 			</section>
 			<ol className="grid gap-5 sm:grid-cols-3">
 				{STEPS.map(([verb, rest], i) => (
@@ -162,12 +172,20 @@ export function Onboard({
 	);
 }
 
-function Copy({ text }: { text: string }) {
+function Copy({
+	text,
+	label,
+	primary = false,
+}: {
+	text: string;
+	label: string;
+	primary?: boolean;
+}) {
 	const [copied, setCopied] = useState(false);
 	return (
 		<button
 			type="button"
-			className="flex h-11 items-center justify-center gap-2 rounded-xl bg-primary font-medium text-primary-foreground transition-all outline-none hover:bg-primary/85 focus-visible:ring-3 focus-visible:ring-ring/50 active:translate-y-px"
+			className={`flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4 font-medium transition-all outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:translate-y-px ${primary ? "bg-primary text-primary-foreground hover:bg-primary/85" : "border bg-background/80 hover:bg-muted"}`}
 			onClick={async () => {
 				await navigator.clipboard.writeText(text);
 				setCopied(true);
@@ -193,7 +211,7 @@ function Copy({ text }: { text: string }) {
 					</>
 				)}
 			</svg>
-			{copied ? "Copied" : "Copy the prompt"}
+			{copied ? "Copied" : label}
 		</button>
 	);
 }

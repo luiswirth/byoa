@@ -1,0 +1,19 @@
+{
+	"name": "byoa",
+	"private": true,
+	"type": "module",
+	"exports": {
+		"./client": "./client/index.ts"
+	},
+	"files": [
+		"client"
+	],
+	"scripts": {
+		"dev": "wrangler dev",
+		"types": "wrangler types relay/env.d.ts"
+	},
+	"devDependencies": {
+		"typescript": "^7.0.2",
+		"wrangler": "^4.151.2"
+	}
+}

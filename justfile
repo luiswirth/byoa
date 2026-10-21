@@ -24,3 +24,4 @@ test:
     node_modules/.bin/wrangler dev --port 8791 >/dev/null 2>&1 &
     trap 'kill $!' EXIT
     tests/transport.sh http://localhost:8791
+    node tests/secrets.ts

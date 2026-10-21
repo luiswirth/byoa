@@ -181,3 +181,71 @@ export class Session {
 		}
 	}
 }
+
+export const KEY = "application/vnd.byoa.key";
+export const SECRET = "application/vnd.byoa.secret+json";
+
+const OAEP = { name: "RSA-OAEP", hash: "SHA-256" } as const;
+
+/** A participant's side of secrets, as `transport.md` describes them: a key
+ * pair that lives as long as the page, and the secrets sent to it. Optional:
+ * a page that needs no secrets never makes one. */
+export class Secrets {
+	readonly #session: Pick<Session, "send">;
+	#pair: Promise<CryptoKeyPair> | null = null;
+	#published: Promise<number> | null = null;
+
+	constructor(session: Pick<Session, "send">) {
+		this.#session = session;
+	}
+
+	/** Publishes the public key, once, which asks for secrets. Returns its
+	 * entry's number. */
+	publish(): Promise<number> {
+		this.#published ??= (async () => {
+			const spki = await crypto.subtle.exportKey(
+				"spki",
+				(await this.#keys()).publicKey,
+			);
+			return this.#session.send(pem(spki), { type: KEY });
+		})();
+		return this.#published;
+	}
+
+	/** The secret in `entry`, if it is one sent to this participant's key. */
+	async open(entry: Entry): Promise<{ name: string; value: string } | null> {
+		if (entry.type.split(";")[0] !== SECRET || !entry.text) return null;
+		if (!this.#published) return null;
+		const { key, name, data } = JSON.parse(entry.text) as {
+			key: number;
+			name: string;
+			data: string;
+		};
+		if (key !== (await this.#published)) return null;
+		const plain = await crypto.subtle.decrypt(
+			OAEP,
+			(await this.#keys()).privateKey,
+			Uint8Array.from(atob(data), (c) => c.charCodeAt(0)),
+		);
+		return { name, value: new TextDecoder().decode(plain) };
+	}
+
+	#keys(): Promise<CryptoKeyPair> {
+		this.#pair ??= crypto.subtle.generateKey(
+			{
+				...OAEP,
+				modulusLength: 3072,
+				publicExponent: new Uint8Array([1, 0, 1]),
+			},
+			false,
+			["encrypt", "decrypt"],
+		);
+		return this.#pair;
+	}
+}
+
+function pem(spki: ArrayBuffer): string {
+	const base64 = btoa(String.fromCharCode(...new Uint8Array(spki)));
+	const lines = base64.match(/.{1,64}/g) ?? [];
+	return `-----BEGIN PUBLIC KEY-----\n${lines.join("\n")}\n-----END PUBLIC KEY-----\n`;
+}

@@ -185,6 +185,28 @@ named `application/vnd.byoa.<protocol>.<entry>`, with `+json` for structured one
 The transport carries them like any other entry.
 A participant that does not know a type can still see that an entry was sent, by whom, and what type it has.
 
+## Secrets
+
+The log keeps everything, so a secret, such as an API key, goes into it only encrypted to its recipient.
+This is optional: a participant that can't encrypt sends no secrets, and a service offers another way.
+
+- `application/vnd.byoa.key`: a participant's public key, as PEM, for RSA-OAEP with SHA-256.
+  It asks for secrets, and the service says which.
+  Fetch it by its number: `curl -s -o key.pem '<link>/<n>?as=<name>'`.
+- `application/vnd.byoa.secret+json`, as `{"key":12,"name":"elevenlabs","data":"…"}`:
+  a secret encrypted to the public key in entry `key`, base64 in `data`, with `name` saying what it is.
+  At most 318 bytes, which a 3072-bit key allows.
+
+Encrypt straight from where the secret is kept, so that it never shows in your output:
+
+```sh
+data=$(openssl pkeyutl -encrypt -pubin -inkey key.pem \
+  -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 -pkeyopt rsa_mgf1_md:sha256 \
+  -in <file> | base64 | tr -d '\n')
+curl -s -H 'Content-Type: application/vnd.byoa.secret+json' \
+  --data-binary "{\"key\":<n>,\"name\":\"<name of the secret>\",\"data\":\"$data\"}" '<link>?as=<name>'
+```
+
 ## For agents
 
 - If your harness can run a command in the background and wake you when it ends,

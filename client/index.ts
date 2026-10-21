@@ -67,9 +67,14 @@ export class Session {
 
 	/** Stops receiving, and leaves. Returns the leave entry's number. */
 	async leave(): Promise<number> {
+		this.close();
+		return this.#post("/leave");
+	}
+
+	/** Stops receiving without leaving, as when the page closes. */
+	close(): void {
 		this.#receiving?.abort();
 		this.#receiving = null;
-		return this.#post("/leave");
 	}
 
 	/** Sends a payload, of type `type` or the body's own, and returns its

@@ -4,11 +4,13 @@
 	"type": "module",
 	"exports": {
 		"./client": "./client/index.ts",
-		"./onboard": "./onboard/index.tsx"
+		"./onboard": "./onboard/index.tsx",
+		"./react": "./react/index.ts"
 	},
 	"files": [
 		"client",
-		"onboard"
+		"onboard",
+		"react"
 	],
 	"scripts": {
 		"dev": "wrangler dev",

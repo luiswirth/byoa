@@ -7,6 +7,7 @@ ci:
     pnpm exec tsc -p relay
     pnpm exec tsc -p client
     pnpm exec tsc -p onboard
+    pnpm exec tsc -p react
     just test
 
 # The relay, locally, on port 8790.

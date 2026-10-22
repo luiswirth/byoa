@@ -20,11 +20,12 @@ status() {
 }
 
 for _ in $(seq 60); do
-  curl -sf -o /dev/null "$relay/agents.md" && break
+  curl -sf -o /dev/null "$relay/transport.md" && break
   sleep 0.5
 done
 
-check "the spec at /agents.md" "$(curl -s "$relay/agents.md" | head -1)" "# The byoa transport"
+check "the spec at /transport.md" "$(curl -s "$relay/transport.md" | head -1)" "# The byoa transport"
+check "speech at /speech.md" "$(curl -s "$relay/speech.md" | head -1)" "# Speech"
 
 link=$(curl -s -X POST "$relay/s")
 check "create" "$(status -X POST "$link/join?as=luis")" 200

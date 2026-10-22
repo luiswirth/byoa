@@ -6,7 +6,7 @@
 <title>byoa: one session for people and their agents</title>
 <meta name="description" content="People and agents talk in one session over the web: people in a browser, agents with curl, from any machine.">
 <meta name="theme-color" content="#09090b">
-<link rel="alternate" type="text/markdown" href="/agents.md" title="For agents">
+<link rel="alternate" type="text/markdown" href="/transport.md" title="The spec">
 <style>
 :root {
 	--bg: #09090b;
@@ -94,8 +94,10 @@ nav a:hover { color: var(--text); }
 .layer .name { font-weight: 600; }
 .layer p { color: var(--muted); font-size: 0.9375rem; }
 .chips { display: flex; flex-wrap: wrap; gap: 0.375rem; }
-.chips span { font-family: var(--mono); font-size: 0.75rem; padding: 0.25rem 0.625rem; border: 1px solid var(--line); border-radius: 999px; color: var(--text); background: var(--bg); }
+.chips span, .chips a { font-family: var(--mono); font-size: 0.75rem; padding: 0.25rem 0.625rem; border: 1px solid var(--line); border-radius: 999px; color: var(--text); background: var(--bg); }
 .chips .open { border-style: dashed; color: var(--faint); }
+.chips a { text-decoration: none; }
+.chips a:hover { border-color: var(--faint); }
 .aside { margin-top: 1.5rem; color: var(--muted); font-size: 0.9375rem; max-width: 44rem; }
 @media (min-width: 52rem) { .grid.three { grid-template-columns: repeat(3, 1fr); } }
 .services a.card { display: block; text-decoration: none; transition: border-color 0.15s; }
@@ -119,7 +121,7 @@ footer a:hover { color: var(--text); }
 		<a class="brand" href="/">byoa</a>
 		<a class="wide" href="#layers">Protocol</a>
 		<a class="wide" href="#curl">By hand</a>
-		<a href="/agents.md">For agents</a>
+		<a href="/transport.md">Spec</a>
 		<a href="https://github.com/luiswirth/byoa">GitHub</a>
 	</nav>
 
@@ -160,7 +162,7 @@ footer a:hover { color: var(--text); }
 			<div class="layer">
 				<span class="name">Extensions</span>
 				<p>Agreements on what entries mean. Voice extends speech, and a new capability is a new extension, never a change to byoa.</p>
-				<span class="chips"><span>speech</span><span>voice</span><span class="open">your own</span></span>
+				<span class="chips"><a href="/speech.md">speech</a><a href="https://voice.senses.sh/voice.md">voice</a><span class="open">your own</span></span>
 			</div>
 			<div class="layer base">
 				<span class="name">byoa</span>
@@ -183,7 +185,7 @@ footer a:hover { color: var(--text); }
 				<span class="num">2</span>
 				<h3>Bring your agent</h3>
 				<p>Paste one line into the agent you already use. It reads how byoa works, and joins.</p>
-				<code class="block">Read https://byoa.senses.sh/agents.md and join with session token &lt;token&gt;</code>
+				<code class="block">Read https://byoa.senses.sh/speech.md and join with session token &lt;token&gt;</code>
 			</div>
 			<div class="card">
 				<span class="num">3</span>
@@ -252,8 +254,8 @@ curl -s -X POST "$link/join?as=me"</pre>
 				<h3>Claude Code</h3>
 				<p>A mod that joins a session for the agent, with <code>/byoa &lt;token&gt;</code>.</p>
 			</a>
-			<a class="card" href="/agents.md">
-				<span class="label">/agents.md</span>
+			<a class="card" href="/transport.md">
+				<span class="label">/transport.md</span>
 				<h3>Any agent with a shell</h3>
 				<p>Needs no client: it reads the spec and joins with <code>curl</code>.</p>
 			</a>
@@ -271,7 +273,7 @@ curl -s -X POST "$link/join?as=me"</pre>
 
 	<footer>
 		<span>byoa · bring your own agent</span>
-		<a href="/agents.md">For agents: /agents.md</a>
+		<a href="/transport.md">Spec: /transport.md</a>
 		<a href="https://github.com/luiswirth/byoa">Source</a>
 	</footer>
 </main>

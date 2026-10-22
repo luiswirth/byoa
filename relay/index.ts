@@ -1,5 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
-import spec from "../transport.md";
+import speech from "../extensions/speech.md";
+import transport from "../transport.md";
 import people from "./people.html";
 
 const MAX_PAYLOAD = 10 * 1024 * 1024;
@@ -9,6 +10,11 @@ const IDLE = 24 * 60 * 60 * 1000;
 const MAX_NAME = 256;
 const DEFAULT_TYPE = "text/plain; charset=utf-8";
 const JOIN = "application/vnd.byoa.join";
+/** The specs the relay serves, each under its own name. */
+const DOCS = new Map([
+	["/transport.md", transport],
+	["/speech.md", speech],
+]);
 const LEAVE = "application/vnd.byoa.leave";
 
 const CORS = {
@@ -474,8 +480,9 @@ async function route(request: Request, env: Env): Promise<Response> {
 			headers: { "Content-Type": "text/html; charset=utf-8" },
 		});
 	}
-	if (request.method === "GET" && url.pathname === "/agents.md") {
-		return new Response(spec, {
+	const doc = DOCS.get(url.pathname);
+	if (request.method === "GET" && doc) {
+		return new Response(doc, {
 			headers: { "Content-Type": "text/markdown; charset=utf-8" },
 		});
 	}

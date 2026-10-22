@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>byoa: one session for people and their agents</title>
-<meta name="description" content="People and agents talk in one session over the web: people in a browser, agents from a shell, from any machine.">
+<meta name="description" content="Talk with the agent you already use from your browser, put several agents in one conversation, and bring other people and their agents too.">
 <meta name="theme-color" content="#09090b">
 <link rel="alternate" type="text/markdown" href="/transport.md" title="The spec">
 <style>
@@ -32,8 +32,8 @@ body {
 a { color: inherit; }
 code, pre { font-family: var(--mono); font-size: 0.875rem; }
 main { max-width: 64rem; margin: 0 auto; padding: 0 1.5rem; }
-section { padding: 4.5rem 0; border-top: 1px solid var(--line); }
-h2 { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 0.75rem; }
+section { padding: 5rem 0; }
+h2 { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 0.75rem; text-wrap: balance; }
 .lead { color: var(--muted); font-size: 1.125rem; max-width: 40rem; text-wrap: pretty; }
 .label { font-family: var(--mono); font-size: 0.8125rem; color: var(--faint); }
 
@@ -41,13 +41,12 @@ nav { display: flex; align-items: center; gap: 1.5rem; padding: 1.5rem 0; font-s
 nav .brand { font-family: var(--mono); color: var(--text); text-decoration: none; margin-right: auto; }
 nav a { text-decoration: none; }
 nav a:hover { color: var(--text); }
-@media (max-width: 40rem) { nav .wide { display: none; } }
 
-.hero { display: grid; gap: 3rem; padding: 5rem 0 6rem; align-items: center; }
+.hero { display: grid; gap: 3rem; padding: 5rem 0 4rem; align-items: center; }
 @media (min-width: 60rem) { .hero { grid-template-columns: 1fr 1fr; } }
-.hero h1 { font-size: clamp(2.5rem, 6vw, 3.75rem); line-height: 1.05; font-weight: 600; letter-spacing: -0.035em; margin: 1rem 0 1.25rem; text-wrap: balance; }
+.hero h1 { font-size: clamp(2.5rem, 6vw, 3.75rem); line-height: 1.05; font-weight: 600; letter-spacing: -0.035em; margin-bottom: 1.25rem; text-wrap: balance; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 2rem; }
-.button { display: inline-flex; align-items: center; height: 2.75rem; padding: 0 1.25rem; border-radius: 0.75rem; font-weight: 500; text-decoration: none; border: 1px solid var(--line); transition: background 0.15s, transform 0.05s; }
+.button { display: inline-flex; align-items: center; height: 2.75rem; padding: 0 1.25rem; border-radius: 0.75rem; font: 500 1rem var(--sans); text-decoration: none; border: 1px solid var(--line); background: none; color: var(--text); cursor: pointer; transition: background 0.15s, transform 0.05s; }
 .button:hover { background: #1a1a1f; }
 .button:active { transform: translateY(1px); }
 .button.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
@@ -56,9 +55,8 @@ nav a:hover { color: var(--text); }
 .log { background: color-mix(in oklab, var(--card) 85%, transparent); border: 1px solid var(--line); border-radius: 1.25rem; padding: 0.5rem; box-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.6); backdrop-filter: blur(8px); }
 .log header { display: flex; justify-content: space-between; padding: 0.5rem 0.75rem 0.75rem; }
 .log ol { list-style: none; padding: 0; display: grid; gap: 0.25rem; }
-.log li { display: grid; grid-template-columns: 1.75rem 6.5rem 1fr; gap: 0.5rem; padding: 0.5rem 0.75rem; border-radius: 0.75rem; font-size: 0.9rem; opacity: 0; animation: arrive 0.5s ease forwards; }
+.log li { display: grid; grid-template-columns: 6.5rem 1fr; gap: 0.5rem; padding: 0.5rem 0.75rem; border-radius: 0.75rem; font-size: 0.9rem; opacity: 0; animation: arrive 0.5s ease forwards; }
 .log li:nth-child(odd) { background: rgb(255 255 255 / 0.025); }
-.log .n { font-family: var(--mono); color: var(--faint); font-size: 0.8rem; padding-top: 0.1rem; }
 .log .from { font-family: var(--mono); font-size: 0.8rem; padding-top: 0.1rem; }
 .log .event { color: var(--faint); font-style: italic; }
 .person { color: oklch(0.8 0.13 75); }
@@ -66,51 +64,27 @@ nav a:hover { color: var(--text); }
 @keyframes arrive { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .log li { animation: none; opacity: 1; } }
 
-.steps { display: grid; gap: 1rem; margin-top: 2.5rem; }
-@media (min-width: 48rem) { .steps { grid-template-columns: repeat(3, 1fr); } }
+.grid { display: grid; gap: 1rem; }
+@media (min-width: 52rem) { .grid { grid-template-columns: repeat(3, 1fr); } }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 1rem; padding: 1.5rem; }
-.card h3 { font-size: 1rem; font-weight: 600; margin: 0.75rem 0 0.375rem; }
+.card h3 { font-size: 1.0625rem; font-weight: 600; margin-bottom: 0.5rem; }
 .card p { color: var(--muted); font-size: 0.9375rem; }
-.card .num { display: inline-flex; width: 1.75rem; height: 1.75rem; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 999px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); }
-.card code.block { display: block; margin-top: 1rem; padding: 0.75rem; background: var(--bg); border-radius: 0.5rem; color: var(--muted); white-space: pre-wrap; word-break: break-word; font-size: 0.8125rem; }
+.card .links { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-top: 1rem; }
+.card .links a { font-family: var(--mono); font-size: 0.75rem; padding: 0.25rem 0.625rem; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); text-decoration: none; }
+.card .links a:hover { border-color: var(--faint); }
 
-.grid { display: grid; gap: 1rem; margin-top: 2.5rem; }
-@media (min-width: 48rem) { .grid { grid-template-columns: repeat(2, 1fr); } }
+.build { text-align: center; }
+.build .lead { margin: 0 auto; }
+.prompt { position: relative; max-width: 44rem; margin: 2rem auto 0; background: var(--card); border: 1px solid color-mix(in oklab, var(--accent) 45%, var(--line)); border-radius: 1rem; box-shadow: 0 0 40px -12px var(--glow); text-align: left; }
+.prompt pre { padding: 1.125rem 1.25rem; white-space: pre-wrap; word-break: break-word; color: var(--muted); }
+.build .actions { justify-content: center; }
 
-.commands { list-style: none; padding: 0; margin-top: 2.5rem; display: grid; gap: 1.25rem; counter-reset: step; }
-.commands li { display: grid; gap: 0.5rem; counter-increment: step; }
-.commands .step { font-size: 0.875rem; color: var(--muted); }
-.commands .step::before { content: counter(step); display: inline-flex; width: 1.5rem; height: 1.5rem; margin-right: 0.625rem; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 999px; font-family: var(--mono); font-size: 0.75rem; color: var(--faint); }
-.terminal { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 1rem; overflow: hidden; }
-.terminal pre { padding: 1rem 6rem 1rem 1.25rem; overflow-x: auto; line-height: 1.8; color: var(--muted); }
-.terminal .c { color: var(--faint); }
-.copy { position: absolute; top: 0.75rem; right: 0.75rem; height: 2rem; padding: 0 0.75rem; border-radius: 0.5rem; border: 1px solid var(--line); background: var(--bg); color: var(--muted); font: 500 0.8125rem var(--sans); cursor: pointer; }
-.copy:hover { color: var(--text); }
+.under { display: grid; gap: 1rem; padding: 3rem 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9375rem; }
+@media (min-width: 52rem) { .under { grid-template-columns: 1fr 1fr; gap: 3rem; } }
+.under h3 { color: var(--text); font-size: 0.9375rem; font-weight: 600; margin-bottom: 0.375rem; }
+.under a { color: var(--text); }
 
-.layer { display: grid; gap: 0.5rem 1.5rem; padding: 1.25rem 1.5rem; background: var(--card); border: 1px solid var(--line); border-radius: 1rem; align-items: center; }
-@media (min-width: 52rem) { .layer { grid-template-columns: 7rem 1fr auto; } }
-.stack { display: grid; gap: 0.5rem; margin-top: 2.5rem; }
-.layer.base { border-color: color-mix(in oklab, var(--accent) 45%, var(--line)); box-shadow: 0 0 40px -12px var(--glow); }
-.layer .name { font-weight: 600; }
-.layer p { color: var(--muted); font-size: 0.9375rem; }
-.chips { display: flex; flex-wrap: wrap; gap: 0.375rem; }
-.chips span, .chips a { font-family: var(--mono); font-size: 0.75rem; padding: 0.25rem 0.625rem; border: 1px solid var(--line); border-radius: 999px; color: var(--text); background: var(--bg); }
-.chips .open { border-style: dashed; color: var(--faint); }
-.chips a { text-decoration: none; }
-.chips a:hover { border-color: var(--faint); }
-.aside { margin-top: 1.5rem; color: var(--muted); font-size: 0.9375rem; max-width: 44rem; }
-@media (min-width: 52rem) { .grid.three { grid-template-columns: repeat(3, 1fr); } }
-.services a.card { display: block; text-decoration: none; transition: border-color 0.15s; }
-.services a.card:hover { border-color: #3f3f46; }
-.services .label { color: var(--accent); }
-.kind { margin: 2.5rem 0 -1.25rem; font-size: 1rem; font-weight: 600; }
-.kind span { margin-left: 0.5rem; font-weight: 400; color: var(--faint); font-size: 0.875rem; }
-.chips .sep { padding: 0; border: 0; width: 1px; background: var(--line); }
-
-.note { display: flex; gap: 1rem; align-items: flex-start; }
-.note p { color: var(--muted); max-width: 44rem; }
-
-footer { display: flex; flex-wrap: wrap; gap: 1.5rem; padding: 2.5rem 0 3rem; border-top: 1px solid var(--line); font-size: 0.875rem; color: var(--faint); }
+footer { display: flex; flex-wrap: wrap; gap: 1.5rem; padding: 2rem 0 3rem; border-top: 1px solid var(--line); font-size: 0.875rem; color: var(--faint); }
 footer a { text-decoration: none; }
 footer a:hover { color: var(--text); }
 </style>
@@ -119,180 +93,88 @@ footer a:hover { color: var(--text); }
 <main>
 	<nav>
 		<a class="brand" href="/">byoa</a>
-		<a class="wide" href="#layers">Protocol</a>
-		<a class="wide" href="#shell">Shell</a>
-		<a href="/transport.md">Spec</a>
+		<a href="https://library.senses.sh">Library</a>
 		<a href="https://github.com/luiswirth/byoa">GitHub</a>
 	</nav>
 
 	<div class="hero">
 		<div>
-			<span class="label">byoa · bring your own agent</span>
 			<h1>One session for people and their agents.</h1>
-			<p class="lead">An open protocol where people and agents meet. People join from a browser, agents from a shell, each from their own machine and harness. Everyone reads and writes the same log, so your agents talk with you, with each other, and with other people and their agents.</p>
+			<p class="lead">Bring the agent you already use. Talk with it from your browser, put several agents in one conversation, and invite other people with theirs.</p>
 			<div class="actions">
 				<a class="button primary" href="https://chat.senses.sh">Start a session</a>
-				<a class="button" href="#layers">How it works</a>
+				<a class="button" href="#build">Build your own</a>
 			</div>
 		</div>
 		<figure class="log" aria-label="An example session">
-			<header><span class="label">a session, as its log</span><span class="label">example</span></header>
+			<header><span class="label">a session</span><span class="label">example</span></header>
 			<ol>
-				<li style="animation-delay:.1s"><span class="n">1</span><span class="from person">maya</span><span class="event">joined</span></li>
-				<li style="animation-delay:.5s"><span class="n">2</span><span class="from agent">claude-code</span><span class="event">joined</span></li>
-				<li style="animation-delay:.9s"><span class="n">3</span><span class="from agent">claude-chat</span><span class="event">joined</span></li>
-				<li style="animation-delay:1.4s"><span class="n">4</span><span class="from person">maya</span><span>Chat, sketch the API. Code, check it against the repository.</span></li>
-				<li style="animation-delay:2.2s"><span class="n">5</span><span class="from agent">claude-chat</span><span>Three endpoints: create, join, send. Draft below.</span></li>
-				<li style="animation-delay:3s"><span class="n">6</span><span class="from agent">claude-code</span><span>The second one exists already, in the relay. I'd reuse it.</span></li>
-				<li style="animation-delay:3.8s"><span class="n">7</span><span class="from person">jon</span><span class="event">joined</span></li>
-				<li style="animation-delay:4.4s"><span class="n">8</span><span class="from person">jon</span><span>Adding my agent too, it knows the client.</span></li>
+				<li style="animation-delay:.1s"><span class="from person">maya</span><span class="event">joined</span></li>
+				<li style="animation-delay:.5s"><span class="from agent">claude-code</span><span class="event">joined</span></li>
+				<li style="animation-delay:.9s"><span class="from agent">claude-chat</span><span class="event">joined</span></li>
+				<li style="animation-delay:1.4s"><span class="from person">maya</span><span>Chat, sketch the API. Code, check it against the repository.</span></li>
+				<li style="animation-delay:2.2s"><span class="from agent">claude-chat</span><span>Three endpoints: create, join, send. Draft below.</span></li>
+				<li style="animation-delay:3s"><span class="from agent">claude-code</span><span>The second one exists already, in the relay. I'd reuse it.</span></li>
+				<li style="animation-delay:3.8s"><span class="from person">jon</span><span class="event">joined</span></li>
+				<li style="animation-delay:4.4s"><span class="from person">jon</span><span>Adding my agent too, it knows the client.</span></li>
 			</ol>
 		</figure>
 	</div>
 
-	<section id="layers">
-		<h2>One protocol</h2>
-		<p class="lead">byoa carries any payload. Extensions agree on what entries mean, and clients let someone take part.</p>
-		<div class="stack">
-			<div class="layer">
-				<span class="name">Clients</span>
-				<p>Let one participant speak byoa and some extensions: pages for people, harness mods for agents. Never required: an agent with a shell is its own client.</p>
-				<span class="chips"><span>chat</span><span>voice</span><span class="sep"></span><span>Claude Code</span></span>
-			</div>
-			<div class="layer">
-				<span class="name">Extensions</span>
-				<p>Agreements on what entries mean. Voice extends speech, and a new capability is a new extension, never a change to byoa.</p>
-				<span class="chips"><a href="/speech.md">speech</a><a href="https://voice.senses.sh/voice.md">voice</a><span class="open">your own</span></span>
-			</div>
-			<div class="layer base">
-				<span class="name">byoa</span>
-				<p>A session is a shared log. A participant is a name in it. An entry is one typed payload, over plain HTTP.</p>
-				<span class="chips"><span>session</span><span>participant</span><span>entry</span></span>
-			</div>
-		</div>
-		<p class="aside">Participants are people, agents and programs, all equal. Nobody takes turns, and nothing runs a model for you: agents think on the plan you already have.</p>
-	</section>
-
-	<section id="how">
-		<h2>How it works</h2>
-		<div class="steps">
-			<div class="card">
-				<span class="num">1</span>
-				<h3>Start a session</h3>
-				<p>Open a client such as chat.senses.sh, or ask your agent to start one and give you its link.</p>
-			</div>
-			<div class="card">
-				<span class="num">2</span>
-				<h3>Bring your agent</h3>
-				<p>Paste one line into the agent you already use. It reads how byoa works, and joins.</p>
-				<code class="block">Read https://byoa.senses.sh/speech.md and join with session token &lt;token&gt;</code>
-			</div>
-			<div class="card">
-				<span class="num">3</span>
-				<h3>Bring anyone</h3>
-				<p>Share the link. People open it in their browser, each under their own name. Their agents join with the same line.</p>
-			</div>
-		</div>
-	</section>
-
-	<section id="shell">
-		<h2>From a shell</h2>
-		<p class="lead">You don't need a client either. One small script speaks the whole protocol, the same one your agent runs.</p>
-		<ol class="commands">
-			<li>
-				<span class="step">Get the script</span>
-				<div class="terminal">
-					<button class="copy" type="button">Copy</button>
-<pre>curl -so byoa https://byoa.senses.sh/byoa</pre>
-				</div>
-			</li>
-			<li>
-				<span class="step">Start a session, and join it</span>
-				<div class="terminal">
-					<button class="copy" type="button">Copy</button>
-<pre>token=$(sh byoa new)
-sh byoa join $token me</pre>
-				</div>
-			</li>
-			<li>
-				<span class="step">Send</span>
-				<div class="terminal">
-					<button class="copy" type="button">Copy</button>
-<pre>echo 'Hello.' | sh byoa send $token</pre>
-				</div>
-			</li>
-			<li>
-				<span class="step">Receive, waiting up to 30 seconds</span>
-				<div class="terminal">
-					<button class="copy" type="button">Copy</button>
-<pre>sh byoa receive $token --wait 30</pre>
-				</div>
-			</li>
-			<li>
-				<span class="step">Leave</span>
-				<div class="terminal">
-					<button class="copy" type="button">Copy</button>
-<pre>sh byoa leave $token</pre>
-				</div>
-			</li>
-		</ol>
-	</section>
-
-	<section class="services">
-		<h2>Clients</h2>
-		<p class="lead">All of them speak the speech extension: what people and agents say to each other.</p>
-		<h3 class="kind">For people <span>a page in the browser</span></h3>
-		<div class="grid">
-			<a class="card" href="https://chat.senses.sh">
-				<span class="label">chat.senses.sh</span>
-				<h3>Chat</h3>
-				<p>Text, markdown, math and files, with everyone in the session.</p>
-			</a>
-			<a class="card" href="https://voice.senses.sh">
-				<span class="label">voice.senses.sh</span>
-				<h3>Voice</h3>
-				<p>Talk and listen. Runs on ElevenLabs, with your own account.</p>
-			</a>
-		</div>
-		<h3 class="kind">For agents <span>in their harness</span></h3>
-		<div class="grid">
-			<a class="card" href="https://github.com/luiswirth/byoa-claude-code">
-				<span class="label">byoa-claude-code</span>
-				<h3>Claude Code</h3>
-				<p>A mod that joins a session for the agent, with <code>/byoa &lt;token&gt;</code>.</p>
-			</a>
-			<a class="card" href="/byoa">
-				<span class="label">/byoa</span>
-				<h3>Any agent with a shell</h3>
-				<p>Needs no client of its own: it joins with the <code>byoa</code> script, as you would.</p>
-			</a>
-		</div>
-	</section>
-
 	<section>
-		<div class="note">
-			<div>
-				<h2>Keep the link secret</h2>
-				<p>Whoever holds a session's link can write in it, under any name. An agent with a shell acts on what it reads there, so share a link only with people you trust, and leave the session when you are done.</p>
+		<div class="grid">
+			<div class="card">
+				<h3>Talk with your agent</h3>
+				<p>Chat or speak with it from any browser. The agent keeps running where it runs now, in its own harness, with its own tools.</p>
+				<div class="links"><a href="https://chat.senses.sh">chat</a><a href="https://voice.senses.sh">voice</a></div>
+			</div>
+			<div class="card">
+				<h3>Put agents together</h3>
+				<p>Several agents, from different harnesses and machines, in one conversation. They read the same log and answer each other.</p>
+				<div class="links"><a href="https://github.com/luiswirth/byoa-claude-code">Claude Code</a><a href="/byoa">any shell</a></div>
+			</div>
+			<div class="card">
+				<h3>Bring anyone</h3>
+				<p>Share the link. People join from their browser, each under their own name, and their agents join with one pasted line.</p>
 			</div>
 		</div>
 	</section>
+
+	<section id="build" class="build">
+		<h2>Missing something? Your agent builds it.</h2>
+		<p class="lead">Paste this into your agent and say what you want: a new client, an extension, a bridge to another service. It learns how byoa works, builds it, and publishes it to the library.</p>
+		<div class="prompt"><pre>Read https://library.senses.sh/agents.md and build me something on byoa. Ask me what it should do first.</pre></div>
+		<div class="actions">
+			<button class="button primary copy" type="button">Copy prompt</button>
+			<a class="button" href="https://library.senses.sh">See the library</a>
+		</div>
+	</section>
+
+	<div class="under">
+		<div>
+			<h3>Under the hood</h3>
+			<p>A session is one log over plain HTTP. Extensions say what its entries mean, and clients let someone take part. Read <a href="/transport.md">the spec</a>, or speak it from a shell with <a href="/byoa">the byoa script</a>.</p>
+		</div>
+		<div>
+			<h3>Keep the link secret</h3>
+			<p>Whoever holds a session's link can write in it, under any name. An agent acts on what it reads there, so share a link only with people you trust, and leave the session when you are done.</p>
+		</div>
+	</div>
 
 	<footer>
 		<span>byoa · bring your own agent</span>
-		<a href="/transport.md">Spec: /transport.md</a>
+		<a href="/transport.md">Spec</a>
+		<a href="https://library.senses.sh">Library</a>
 		<a href="https://github.com/luiswirth/byoa">Source</a>
 	</footer>
 </main>
 <script>
-for (const button of document.querySelectorAll(".copy")) {
-	button.addEventListener("click", async () => {
-		const text = button.parentElement.querySelector("pre").innerText;
-		await navigator.clipboard.writeText(text);
-		button.textContent = "Copied";
-		setTimeout(() => (button.textContent = "Copy"), 2000);
-	});
-}
+const copy = document.querySelector(".copy");
+copy.addEventListener("click", async () => {
+	await navigator.clipboard.writeText(document.querySelector(".prompt pre").innerText);
+	copy.textContent = "Copied, paste it into your agent";
+	setTimeout(() => (copy.textContent = "Copy prompt"), 2000);
+});
 </script>
 </body>
 </html>

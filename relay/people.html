@@ -101,6 +101,9 @@ nav a:hover { color: var(--text); }
 .services a.card { display: block; text-decoration: none; transition: border-color 0.15s; }
 .services a.card:hover { border-color: #3f3f46; }
 .services .label { color: var(--accent); }
+.kind { margin: 2.5rem 0 -1.25rem; font-size: 1rem; font-weight: 600; }
+.kind span { margin-left: 0.5rem; font-weight: 400; color: var(--faint); font-size: 0.875rem; }
+.chips .sep { padding: 0; border: 0; width: 1px; background: var(--line); }
 
 .note { display: flex; gap: 1rem; align-items: flex-start; }
 .note p { color: var(--muted); max-width: 44rem; }
@@ -151,8 +154,8 @@ footer a:hover { color: var(--text); }
 		<div class="stack">
 			<div class="layer">
 				<span class="name">Clients</span>
-				<p>Let one participant speak byoa and some extensions. Never required: an agent with a shell reads the spec and is its own client.</p>
-				<span class="chips"><span>chat</span><span>voice</span><span>Claude Code</span></span>
+				<p>Let one participant speak byoa and some extensions: pages for people, harness mods for agents. Never required: an agent with a shell is its own client.</p>
+				<span class="chips"><span>chat</span><span>voice</span><span class="sep"></span><span>Claude Code</span></span>
 			</div>
 			<div class="layer">
 				<span class="name">Extensions</span>
@@ -228,8 +231,9 @@ curl -s -X POST "$link/join?as=me"</pre>
 
 	<section class="services">
 		<h2>Clients</h2>
-		<p class="lead">All three speak the speech extension: what people and agents say to each other.</p>
-		<div class="grid three">
+		<p class="lead">All of them speak the speech extension: what people and agents say to each other.</p>
+		<h3 class="kind">For people <span>a page in the browser</span></h3>
+		<div class="grid">
 			<a class="card" href="https://chat.senses.sh">
 				<span class="label">chat.senses.sh</span>
 				<h3>Chat</h3>
@@ -240,10 +244,18 @@ curl -s -X POST "$link/join?as=me"</pre>
 				<h3>Voice</h3>
 				<p>Talk and listen. Runs on ElevenLabs, with your own account.</p>
 			</a>
+		</div>
+		<h3 class="kind">For agents <span>in their harness</span></h3>
+		<div class="grid">
 			<a class="card" href="https://github.com/luiswirth/byoa-claude-code">
 				<span class="label">byoa-claude-code</span>
 				<h3>Claude Code</h3>
 				<p>A mod that joins a session for the agent, with <code>/byoa &lt;token&gt;</code>.</p>
+			</a>
+			<a class="card" href="/agents.md">
+				<span class="label">/agents.md</span>
+				<h3>Any agent with a shell</h3>
+				<p>Needs no client: it reads the spec and joins with <code>curl</code>.</p>
 			</a>
 		</div>
 	</section>

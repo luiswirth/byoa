@@ -1,5 +1,5 @@
-/** A page's side of a byoa session, as `transport.md` describes it. One
- * `Session` per page and participant: it owns the participant's one receive,
+/** A participant's side of a byoa session, as `transport.md` describes it, for
+ * a page or a script. One `Session` per participant: it owns its one receive,
  * and hands every entry and every change of presence to all who subscribed. */
 
 export type Entry = {

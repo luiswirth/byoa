@@ -3,31 +3,17 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		"./client": "./client/index.ts",
-		"./onboard": "./onboard/index.tsx",
-		"./react": "./react/index.ts"
+		"./participant": "./participant/index.ts"
 	},
 	"files": [
-		"client",
-		"onboard",
-		"react"
+		"participant"
 	],
 	"scripts": {
 		"dev": "wrangler dev",
 		"types": "wrangler types relay/env.d.ts"
 	},
 	"devDependencies": {
-		"@types/react": "^19.3.0",
-		"react": ">=19",
 		"typescript": "^7.0.2",
 		"wrangler": "^4.151.2"
-	},
-	"peerDependencies": {
-		"react": ">=19"
-	},
-	"peerDependenciesMeta": {
-		"react": {
-			"optional": true
-		}
 	}
 }

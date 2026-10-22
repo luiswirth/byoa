@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { SECRET, Secrets } from "../client/index.ts";
+import { SECRET, Secrets } from "../participant/index.ts";
 
 const work = mkdtempSync(join(tmpdir(), "secrets-"));
 const secrets = new Secrets({

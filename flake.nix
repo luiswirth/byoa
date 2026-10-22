@@ -39,6 +39,9 @@
         # direnv reads it, no shell runs it.
         settings.formatter.shellcheck.excludes = [".envrc"];
         programs.shfmt.enable = true;
+        # The script has no extension, since it is run as `sh byoa`.
+        settings.formatter.shellcheck.includes = ["*.sh" "byoa"];
+        settings.formatter.shfmt.includes = ["*.sh" "byoa"];
       });
 
     devShells = forEachSystem (pkgs: {

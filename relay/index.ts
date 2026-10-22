@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import script from "../byoa";
 import speech from "../extensions/speech.md";
 import transport from "../transport.md";
 import people from "./people.html";
@@ -478,6 +479,11 @@ async function route(request: Request, env: Env): Promise<Response> {
 	if (request.method === "GET" && url.pathname === "/") {
 		return new Response(people, {
 			headers: { "Content-Type": "text/html; charset=utf-8" },
+		});
+	}
+	if (request.method === "GET" && url.pathname === "/byoa") {
+		return new Response(script, {
+			headers: { "Content-Type": "text/plain; charset=utf-8" },
 		});
 	}
 	const doc = DOCS.get(url.pathname);

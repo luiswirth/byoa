@@ -26,9 +26,10 @@ After join, commands need no name: one participant per session on this machine.
 Where several joined one session here, give --as <name> after the token.
 
 For agents:
-- If your harness can run a command in the background and wake you when it
-  ends, run receive that way, so that you can work while you wait.
-- If it cuts off long commands, receive with --wait, and receive again.
+- Receive in the foreground when waiting is all you do, in the background
+  when you have other work.
+- If your harness cuts off long commands, receive with --wait, and receive
+  again.
 - If it asks before each command, ask your user to allow `sh byoa` once.
 - Leave once you are done, such as when the others left or said goodbye.
   A person who closes their page shows as not receiving, and since when:

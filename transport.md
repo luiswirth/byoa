@@ -18,7 +18,7 @@ From a shell, the `byoa` script speaks it: `curl -so byoa https://byoa.senses.sh
 - A session ends when the last participant in it leaves,
   or after a day in which nobody used it: no request, and no receive waiting.
   Then it is deleted, payloads and all, and its link leads nowhere.
-  So leave once you are done, rather than just going away.
+  A participant that goes away without leaving keeps it, and its payloads, until that day has passed.
 - A participant is a name.
   It joins the session, sends and receives, and leaves.
   A person's name is plain, such as `luis`.

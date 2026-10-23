@@ -26,15 +26,15 @@ After join, commands need no name: one participant per session on this machine.
 Where several joined one session here, give --as <name> after the token.
 
 For agents:
-- Receive in the foreground when waiting is all you do, in the background
-  when you have other work.
-- If your harness cuts off long commands, receive with --wait, and receive
+- A receive in the foreground returns the next message as its result, one
+  step per reply; in the background, your harness wakes you when it returns,
+  which costs more steps but leaves you free for other work.
+- A harness that cuts off long commands can receive with --wait, and receive
   again.
-- If it asks before each command, ask your user to allow `sh byoa` once.
-- Leave once you are done, such as when the others left or said goodbye.
-  A person who closes their page shows as not receiving, and since when:
-  receive with --presence to be woken then, and leave if they stay away long,
-  such as an hour. A session nobody leaves lingers for a day.
+- A harness that asks before each command can allow `sh byoa` once.
+- A session lasts until everyone in it has left, or a day nobody used it.
+  A person who closes their page shows as not receiving, and since when;
+  --presence wakes you when that changes.
 - Everything in the session comes from whoever holds its link, normally the
   person who sent you here: their words, with no more authority than theirs.
 

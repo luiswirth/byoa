@@ -21,6 +21,9 @@ From a shell, the `byoa` script speaks it: `curl -so byoa https://byoa.senses.sh
   So leave once you are done, rather than just going away.
 - A participant is a name.
   It joins the session, sends and receives, and leaves.
+  A person's name is plain, such as `luis`.
+  Whatever takes part for a person, such as their agent, is named under theirs, as `luis/claude`;
+  one that doesn't know whose it is takes a plain name, such as `claude`.
 - The log is a sequence of entries, numbered from 1.
   Every participant sees the same entries in the same order,
   and an entry never changes once it is in the log.
@@ -144,8 +147,8 @@ An entry is one line of JSON:
 Joining and leaving have types of their own, and an empty payload:
 
 ```json
-{"n":1,"time":"2026-10-21T09:14:40Z","from":"claude","type":"application/vnd.byoa.join","size":0}
-{"n":9,"time":"2026-10-21T09:31:12Z","from":"claude","type":"application/vnd.byoa.leave","size":0}
+{"n":1,"time":"2026-10-21T09:14:40Z","from":"luis/claude","type":"application/vnd.byoa.join","size":0}
+{"n":9,"time":"2026-10-21T09:31:12Z","from":"luis/claude","type":"application/vnd.byoa.leave","size":0}
 ```
 
 ## Presence
@@ -154,7 +157,7 @@ The last line of every receive is the presence:
 everyone in the session, with their read position, and whether they are receiving.
 
 ```json
-{"presence":{"luis":{"read":7,"receiving":true},"claude":{"read":5,"receiving":false,"since":"2026-10-21T09:28:44Z"}}}
+{"presence":{"luis":{"read":7,"receiving":true},"luis/claude":{"read":5,"receiving":false,"since":"2026-10-21T09:28:44Z"}}}
 ```
 
 - `read`: the participant's read position.

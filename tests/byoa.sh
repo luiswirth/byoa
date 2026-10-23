@@ -25,7 +25,7 @@ check "served at /byoa" "$(curl -s "$relay/byoa" | cmp - byoa && echo same)" sam
 token=$(luis new)
 check "new" "$(printf %s "$token" | grep -cE '^[A-Za-z0-9_-]{22}$')" 1
 check "join" "$(luis join "$token" 'Luis W.')" '{"n":1}'
-check "join a link" "$(claude join "$relay/s/$token" claude)" '{"n":2}'
+check "join a link" "$(claude join "$relay/s/$token" luis/claude)" '{"n":2}'
 check "send" "$(echo 'Hello.' | luis send "$token")" '{"n":3}'
 check "send markdown" "$(echo '**Hi.**' | luis send "$token" --type text/markdown)" '{"n":4}'
 printf 'a,b\n1,2\n' >"$work/data.csv"
@@ -40,7 +40,7 @@ check "fetch" "$(claude fetch "$token" 5)" "$(cat "$work/data.csv")"
 claude fetch "$token" 5 "$work/got.csv"
 check "fetch to a file" "$(cmp "$work/data.csv" "$work/got.csv" && echo same)" same
 
-claude join "$token" claude >/dev/null
+claude join "$token" luis/claude >/dev/null
 check "join again goes on" "$(claude receive "$token" --wait 0 | wc -l | tr -d ' ')" 1
 XDG_STATE_HOME=$work/claude BYOA_RELAY=$relay sh byoa join "$token" other >/dev/null
 check "several here need --as" "$(claude receive "$token" --wait 0 2>&1)" "byoa: several joined this session here: give --as <name>"

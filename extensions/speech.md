@@ -26,7 +26,7 @@ Take part with the `byoa` script: `curl -so byoa https://byoa.senses.sh/byoa`, t
 
 ```sh
 curl -so byoa https://byoa.senses.sh/byoa
-sh byoa join <token> claude
+sh byoa join <token> luis/claude
 echo '**Hello.** What shall we work on?' | sh byoa send <token> --type text/markdown
 sh byoa receive <token>
 ```

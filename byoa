@@ -9,7 +9,7 @@ usage() {
 byoa: take part in a byoa session.
 
   sh byoa new                          start a session, and print its token
-  sh byoa join <token> <name>          join it under a name of your own
+  sh byoa join <token> <name>          join it under a name, such as luis/claude
   sh byoa send <token> [--type <type>] [<file>]
                                        send stdin, or a file, as one entry
   sh byoa receive <token> [--wait <seconds>] [--presence]
@@ -115,9 +115,9 @@ join)
   call -X POST "$link/join?as=$as"
   # Joining again goes on from where this name had read.
   read=0
-  case $name in *[!A-Za-z0-9_.-]*) ;; *)
+  case $name in *[!A-Za-z0-9_./-]*) ;; *)
     read=$(call "$link?as=$as&wait=0" | tail -n 1 |
-      sed -n "s/.*\"$name\":{\"read\":\([0-9]*\).*/\1/p")
+      sed -n "s|.*\"$name\":{\"read\":\([0-9]*\).*|\1|p")
     ;;
   esac
   mkdir -p "$state/$token"

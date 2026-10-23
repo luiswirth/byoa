@@ -44,8 +44,13 @@ export async function create(relay: string): Promise<string> {
 }
 
 export class Session {
+	/** The session's link, which everyone in it shares. */
 	readonly link: string;
 	readonly name: string;
+	/** The participant's own link, a secret of its own: joining returns it,
+	 * and every later request goes to it. Keep it to join again as the same
+	 * participant, as after a reload: the name is taken for anyone else. */
+	me: string | null;
 	/** Every entry received so far, the participant's own included, in
 	 * order. */
 	readonly log: Entry[] = [];
@@ -55,15 +60,26 @@ export class Session {
 	/** Set by `close`, so that a `join` still on its way starts no receive. */
 	#closed = false;
 
-	constructor(link: string, name: string) {
+	/** `me`, if given, is the participant's own link from an earlier join. */
+	constructor(link: string, name: string, me: string | null = null) {
 		this.link = link.replace(/\/$/, "");
 		this.name = name;
+		this.me = me;
 	}
 
-	/** Joins, and starts receiving. Returns the join entry's number. */
+	/** Joins, again with the own link if it has one, and starts receiving.
+	 * Returns the join entry's number. */
 	async join(): Promise<number> {
 		this.#closed = false;
-		const n = await this.#post("/join");
+		const url = this.me
+			? `${this.me}/join`
+			: `${this.link}/join?as=${encodeURIComponent(this.name)}`;
+		const response = await fetch(url, { method: "POST" });
+		const { n, link } = (await (await checked(response)).json()) as {
+			n: number;
+			link: string;
+		};
+		this.me = link;
 		if (!this.#closed) this.#receive();
 		return n;
 	}
@@ -112,8 +128,8 @@ export class Session {
 	}
 
 	#url(path: string, params: Record<string, string> = {}): string {
-		const url = new URL(this.link + path);
-		url.searchParams.set("as", this.name);
+		if (!this.me) throw new Error("not joined");
+		const url = new URL(this.me + path);
 		for (const [key, value] of Object.entries(params)) {
 			url.searchParams.set(key, value);
 		}

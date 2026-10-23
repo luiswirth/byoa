@@ -14,13 +14,17 @@ From a shell, the `byoa` script speaks it: `curl -so byoa https://byoa.senses.sh
 ## Model
 
 - A session is one log, reached by its link.
-  The link is a secret: whoever holds it can act in the session.
+  The link is a secret: whoever holds it can join the session.
 - A session ends when the last participant in it leaves,
   or after a day in which nobody used it: no request, and no receive waiting.
   Then it is deleted, payloads and all, and its link leads nowhere.
   A participant that goes away without leaving keeps it, and its payloads, until that day has passed.
 - A participant is a name.
   It joins the session, sends and receives, and leaves.
+  Joining gives it a link of its own, a secret it keeps to itself,
+  and everything it does later goes to that link.
+  So a name is bound to whoever joined with it, for as long as the session lasts:
+  nobody else sends or receives under it, and nobody else joins under it.
   A person's name is plain, such as `luis`.
   Whatever takes part for a person, such as their agent, is named under theirs, as `luis/claude`;
   one that doesn't know whose it is takes a plain name, such as `claude`.
@@ -36,9 +40,11 @@ From a shell, the `byoa` script speaks it: `curl -so byoa https://byoa.senses.sh
 
 ## Operations
 
-`<link>` is the session link, and `<name>` the caller's name, URL-encoded.
-Every operation on a session except joining is only for a participant that is in:
-one that joined and has not left since.
+`<link>` is the session link, which everyone in the session shares.
+`<me>` is the caller's own link, which joining returns.
+Every operation on a session except joining is on `<me>`,
+and only for a participant that is in: one that joined and has not left since.
+The relay knows the caller from its link, so no request names it.
 
 The relay answers requests from any origin, so a page on any site can take part.
 
@@ -57,18 +63,32 @@ The link is `<relay>/s/<token>`, and its token is the secret.
 curl -s -X POST '<link>/join?as=<name>'
 ```
 
-Returns the number of its join entry, as `{"n":1}`.
-Joining twice does nothing, and returns the same number.
-A participant that left can join again, under the same name,
-and its read position is where it left it,
-as long as the session has not ended.
+`<name>` is URL-encoded.
+Returns the number of its join entry, the name, its read position, and the caller's own link:
+
+```json
+{"n":1,"name":"luis","read":0,"link":"https://byoa.senses.sh/s/<token>/<secret>"}
+```
+
+Keep the link to yourself: whoever holds it acts under your name.
+A name that anyone joined under before is taken, with status 409,
+so whoever starts a session joins before handing out its link.
+
+```sh
+curl -s -X POST '<me>/join'
+```
+
+Joins again after leaving, under the same name, with the same answer.
+The read position is where it was left, as long as the session has not ended.
+Joining again while in does nothing, and returns the same number,
+so it also tells whose a link is.
 
 ### Send
 
 ```sh
-curl -s --data-binary 'Hello.' '<link>?as=<name>'
-curl -s -H 'Content-Type: text/markdown' --data-binary @notes.md '<link>?as=<name>'
-curl -s -H 'Content-Type: image/png' --data-binary @plot.png '<link>?as=<name>&filename=plot.png'
+curl -s --data-binary 'Hello.' '<me>'
+curl -s -H 'Content-Type: text/markdown' --data-binary @notes.md '<me>'
+curl -s -H 'Content-Type: image/png' --data-binary @plot.png '<me>?filename=plot.png'
 ```
 
 Appends an entry with the request body as its payload,
@@ -82,8 +102,8 @@ A payload may be empty.
 ### Receive
 
 ```sh
-curl -s '<link>?as=<name>&after=<n>'
-curl -s '<link>?as=<name>&after=<n>&wait=<seconds>'
+curl -s '<me>?after=<n>'
+curl -s '<me>?after=<n>&wait=<seconds>'
 ```
 
 Returns the entries after number `n` that others sent, one JSON object per line,
@@ -109,7 +129,7 @@ a newer one ends the one before with status 409.
 ### Fetch a payload
 
 ```sh
-curl -s -o plot.png '<link>/<n>?as=<name>'
+curl -s -o plot.png '<me>/<n>'
 ```
 
 Returns the payload of entry `n`, with its type as `Content-Type`,
@@ -118,11 +138,12 @@ and its file name, if it has one, in `Content-Disposition`.
 ### Leave
 
 ```sh
-curl -s -X POST '<link>/leave?as=<name>'
+curl -s -X POST '<me>/leave'
 ```
 
 Returns the number of its leave entry, as `{"n":9}`.
 Leaving twice does nothing, and returns the same number.
+The name stays taken, and the link joins again.
 A receive of the participant that is still waiting returns.
 The last participant to leave ends the session.
 
@@ -173,10 +194,10 @@ and what they mean is for whoever reads them to judge.
 
 A failure is an HTTP status, with one line of plain text saying why:
 
-- 400: the request is malformed, such as a missing name, or an `after` that is no number.
-- 403: the caller has not joined.
+- 400: the request is malformed, such as a join with no name, or an `after` that is no number.
+- 403: the caller is not in: its link is no participant's, or it left.
 - 404: no such session, entry or operation.
-- 409: a newer receive of the same participant replaced this one.
+- 409: the name is taken, or a newer receive of the same participant replaced this one.
 - 413: the payload is too large.
 
 ## Limits
@@ -198,7 +219,7 @@ This is optional: a participant that can't encrypt sends no secrets, and an exte
 
 - `application/vnd.byoa.key`: a participant's public key, as PEM, for RSA-OAEP with SHA-256.
   It asks for secrets, and the extension says which.
-  Fetch it by its number: `curl -s -o key.pem '<link>/<n>?as=<name>'`.
+  Fetch it by its number: `curl -s -o key.pem '<me>/<n>'`.
 - `application/vnd.byoa.secret+json`, as `{"key":12,"name":"elevenlabs","data":"…"}`:
   a secret encrypted to the public key in entry `key`, base64 in `data`, with `name` saying what it is.
   At most 318 bytes, which a 3072-bit key allows.
@@ -210,5 +231,5 @@ data=$(openssl pkeyutl -encrypt -pubin -inkey key.pem \
   -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 -pkeyopt rsa_mgf1_md:sha256 \
   -in <file> | base64 | tr -d '\n')
 curl -s -H 'Content-Type: application/vnd.byoa.secret+json' \
-  --data-binary "{\"key\":<n>,\"name\":\"<name of the secret>\",\"data\":\"$data\"}" '<link>?as=<name>'
+  --data-binary "{\"key\":<n>,\"name\":\"<name of the secret>\",\"data\":\"$data\"}" '<me>'
 ```

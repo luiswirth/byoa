@@ -17,6 +17,8 @@ const DOCS = new Map([
 	["/speech.md", speech],
 ]);
 const LEAVE = "application/vnd.byoa.leave";
+/** A session's id, and a participant's own part of its link. */
+const TOKEN = /^[\w-]{22}$/;
 
 const CORS = {
 	"Access-Control-Allow-Origin": "*",
@@ -32,10 +34,12 @@ const fail = (status: number, why: string) =>
 		headers: { "Content-Type": "text/plain; charset=utf-8" },
 	});
 
-const number = (n: unknown) =>
-	new Response(`${JSON.stringify({ n: Number(n) })}\n`, {
+const json = (value: unknown) =>
+	new Response(`${JSON.stringify(value)}\n`, {
 		headers: { "Content-Type": "application/json" },
 	});
+
+const number = (n: unknown) => json({ n: Number(n) });
 
 const now = () => `${new Date().toISOString().slice(0, 19)}Z`;
 
@@ -140,6 +144,7 @@ export class Session extends DurableObject<Env> {
 			);
 			CREATE TABLE IF NOT EXISTS participants (
 				name TEXT PRIMARY KEY,
+				secret TEXT NOT NULL UNIQUE,
 				inside INTEGER NOT NULL,
 				entry INTEGER NOT NULL,
 				read INTEGER NOT NULL,
@@ -194,18 +199,25 @@ export class Session extends DurableObject<Env> {
 		}
 		void this.expire();
 		const url = new URL(request.url);
-		const [, , , operation, ...rest] = url.pathname.split("/");
-		const name = url.searchParams.get("as");
-		if (!name) return fail(400, "name yourself with ?as=<name>");
-		if (bytes(name) > MAX_NAME) {
-			return fail(400, `a name is at most ${MAX_NAME} bytes`);
-		}
+		const [, , id, secret, operation, ...rest] = url.pathname.split("/");
 		const post = request.method === "POST";
 		const get = request.method === "GET";
+		if (secret === "join" && !operation && post) {
+			return this.join(url.searchParams.get("as"), `${url.origin}/s/${id}`);
+		}
+		if (!secret) return fail(403, "join first: POST <link>/join?as=<name>");
 		if (rest.length > 0) return fail(404, "no such operation");
-		if (operation === "join" && post) return this.join(name);
-		if (operation === "leave" && post) return await this.leave(name);
-		if (!this.inside(name)) return fail(403, "you have not joined");
+		const known = TOKEN.test(secret)
+			? this.sql("SELECT * FROM participants WHERE secret = ?", secret)[0]
+			: undefined;
+		if (!known) return fail(403, "this link is no participant's");
+		const name = String(known.name);
+		const me = `${url.origin}/s/${id}/${secret}`;
+		if (operation === "join" && post) return this.rejoin(known, me);
+		if (operation === "leave" && post) return await this.leave(known);
+		if (known.inside !== 1) {
+			return fail(403, "you have left: join again with POST <your link>/join");
+		}
 		if (!operation && post) return this.send(name, request, url);
 		if (!operation && get) return this.receive(name, url);
 		if (operation && /^\d+$/.test(operation) && get) {
@@ -214,36 +226,57 @@ export class Session extends DurableObject<Env> {
 		return fail(404, "no such operation");
 	}
 
-	participant(name: string): Row | undefined {
-		return this.sql("SELECT * FROM participants WHERE name = ?", name)[0];
-	}
-
 	inside(name: string): boolean {
-		return this.participant(name)?.inside === 1;
+		return (
+			this.sql("SELECT inside FROM participants WHERE name = ?", name)[0]
+				?.inside === 1
+		);
 	}
 
-	join(name: string): Response {
-		const known = this.participant(name);
-		if (known?.inside === 1) return number(known.entry);
+	/** Takes `name` for the caller, who gets a link of its own: a name is
+	 * bound to whoever joined with it, for the whole session. */
+	join(name: string | null, link: string): Response {
+		if (!name) return fail(400, "name yourself with ?as=<name>");
+		if (bytes(name) > MAX_NAME) {
+			return fail(400, `a name is at most ${MAX_NAME} bytes`);
+		}
+		if (this.sql("SELECT 1 FROM participants WHERE name = ?", name).length) {
+			return fail(409, `${name} is taken in this session`);
+		}
+		const secret = token();
 		const n = this.append(name, JOIN, 0);
 		this.sql(
-			`INSERT INTO participants (name, inside, entry, read, since)
-			VALUES (?, 1, ?, 0, ?)
-			ON CONFLICT (name) DO UPDATE SET inside = 1, entry = ?, since = ?`,
+			`INSERT INTO participants (name, secret, inside, entry, read, since)
+			VALUES (?, ?, 1, ?, 0, ?)`,
 			name,
-			n,
-			now(),
+			secret,
 			n,
 			now(),
 		);
 		this.look();
-		return number(n);
+		return json({ n, name, read: 0, link: `${link}/${secret}` });
+	}
+
+	/** Joins again, after leaving, under the name the link is bound to. */
+	rejoin(known: Row, me: string): Response {
+		const name = String(known.name);
+		const read = Number(known.read);
+		if (known.inside === 1)
+			return json({ n: Number(known.entry), name, read, link: me });
+		const n = this.append(name, JOIN, 0);
+		this.sql(
+			"UPDATE participants SET inside = 1, entry = ?, since = ? WHERE name = ?",
+			n,
+			now(),
+			name,
+		);
+		this.look();
+		return json({ n, name, read, link: me });
 	}
 
 	/** The last to leave ends the session. */
-	async leave(name: string): Promise<Response> {
-		const known = this.participant(name);
-		if (!known) return fail(403, "you have not joined");
+	async leave(known: Row): Promise<Response> {
+		const name = String(known.name);
 		if (known.inside === 0) return number(known.entry);
 		const n = this.append(name, LEAVE, 0);
 		this.sql(
@@ -319,9 +352,11 @@ export class Session extends DurableObject<Env> {
 		if (!row) return fail(404, "no such entry");
 		// The type is the sender's: a payload opened as a page, such as HTML,
 		// runs in a sandbox of its own, never as the relay's site.
+		// Its URL holds the caller's own link, which no page it opens learns.
 		const headers = new Headers({
 			"Content-Type": String(row.type),
 			"Content-Security-Policy": "sandbox",
+			"Referrer-Policy": "no-referrer",
 			"X-Content-Type-Options": "nosniff",
 		});
 		if (row.filename !== null) {
@@ -482,8 +517,9 @@ const entry = (row: Row): Entry => ({
 	...(row.text !== null && { text: String(row.text) }),
 });
 
-/** A session's id, its whole secret: 128 random bits. */
-const newId = () => {
+/** A secret of 128 random bits: a session's id, or a participant's own part
+ * of the session's link. */
+const token = () => {
 	const random = crypto.getRandomValues(new Uint8Array(16));
 	return btoa(String.fromCharCode(...random))
 		.replaceAll("+", "-")
@@ -493,7 +529,7 @@ const newId = () => {
 
 async function route(request: Request, env: Env): Promise<Response> {
 	const url = new URL(request.url);
-	const [, first, id, operation] = url.pathname.split("/");
+	const [, first, id, secret, operation] = url.pathname.split("/");
 	if (request.method === "GET" && url.pathname === "/") {
 		return new Response(people, {
 			headers: { "Content-Type": "text/html; charset=utf-8" },
@@ -513,15 +549,22 @@ async function route(request: Request, env: Env): Promise<Response> {
 	if (first !== "s") return fail(404, "no such page");
 	if (!id) {
 		if (request.method !== "POST") return fail(404, "no such operation");
-		const fresh = newId();
+		const fresh = token();
 		await env.SESSION.getByName(fresh).create();
 		return new Response(`${url.origin}/s/${fresh}\n`, {
 			headers: { "Content-Type": "text/plain; charset=utf-8" },
 		});
 	}
-	if (!/^[\w-]{22}$/.test(id)) return fail(404, "no such session");
+	if (!TOKEN.test(id)) return fail(404, "no such session");
 	const session = env.SESSION.getByName(id);
-	if (request.method === "GET" && !operation) return receive(request, session);
+	if (
+		request.method === "GET" &&
+		secret !== undefined &&
+		TOKEN.test(secret) &&
+		operation === undefined
+	) {
+		return receive(request, session);
+	}
 	return session.fetch(request);
 }
 

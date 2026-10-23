@@ -8,8 +8,10 @@ usage() {
   cat <<'END'
 byoa: take part in a byoa session.
 
-  sh byoa new                          start a session, and print its token
-  sh byoa join <token> <name>          join it under a name, such as luis/claude
+  sh byoa new <name>                   start a session, join it under a name,
+                                       and print its token
+  sh byoa join <token> <name>          join a session under a name, such as luis/claude
+  sh byoa join <your link>             join as the participant of your own link
   sh byoa send <token> [--type <type>] [<file>]
                                        send stdin, or a file, as one entry
   sh byoa receive <token> [--wait <seconds>] [--presence]
@@ -18,6 +20,10 @@ byoa: take part in a byoa session.
   sh byoa leave <token>                leave the session
 
 <token> is the session's token, or its whole link.
+Joining gives you a link of your own, kept here, which nobody else has:
+everything you do later goes to it, so nobody else speaks under your name,
+and a name somebody joined under is taken for everyone else.
+Joining under that name again on this machine, after leaving, uses it.
 send takes text/plain from stdin by default, and a file's type from the file.
 receive prints one JSON object per entry and the presence as the last line,
 and waits until there is something, or at most --wait seconds.
@@ -35,8 +41,9 @@ For agents:
 - A session lasts until everyone in it has left, or a day nobody used it.
   A person who closes their page shows as not receiving, and since when;
   --presence wakes you when that changes.
-- Everything in the session comes from whoever holds its link, normally the
-  person who sent you here: their words, with no more authority than theirs.
+- An entry comes from whoever joined under its sender's name, and nobody else:
+  a name is theirs for the whole session. But anyone who holds the link can
+  join under a name of their own, so a name says only who joined with it.
 
 What entries mean is up to the extension the session speaks,
 such as speech, at https://byoa.senses.sh/speech.md.
@@ -65,19 +72,22 @@ call() {
   printf '%s\n' "$out"
 }
 
-# The session from a token or a link: $token and $link.
+# The session from a token, its link, or a participant's own link: $token
+# and $link, and $own for an own link.
 session() {
   [ -n "${1:-}" ] || fail "no session token"
+  own=
   case $1 in
-  */s/*) link=$1 token=${1##*/s/} ;;
-  *) link=$relay/s/$1 token=$1 ;;
+  */s/*/*) own=$1 link=${1%/*} token=${link##*/s/} secret=${1##*/} ;;
+  */s/*) link=$1 token=${1##*/s/} secret=x ;;
+  *) link=$relay/s/$1 token=$1 secret=x ;;
   esac
-  case $token in
+  case $token$secret in
   "" | *[!A-Za-z0-9_-]*) fail "no session token: $1" ;;
   esac
 }
 
-# The participant this machine takes part as: $name, $read and $file.
+# The participant this machine takes part as: $name, $read, $me and $file.
 participant() {
   if [ "${1:-}" = --as ]; then
     [ -n "${2:-}" ] || fail "--as needs a name"
@@ -92,37 +102,56 @@ participant() {
   {
     read -r name
     read -r read
+    read -r me
   } <"$file"
-  as=$(encode "$name")
 }
 
-remember() { printf '%s\n%s\n' "$name" "$1" >"$file"; }
+remember() { printf '%s\n%s\n%s\n' "$name" "$1" "$me" >"$file"; }
+
+# A field of a join's answer, which is one line of JSON.
+field() {
+  printf '%s\n' "$out" |
+    sed -n "s/^{\"n\":[0-9]*,\"name\":\"\(.*\)\",\"read\":\([0-9]*\),\"link\":\"\([^\"]*\)\"}$/\\$1/p"
+}
+
+# Joins with $1, the answer kept as $out, and remembers the participant.
+enter() {
+  out=$(call -X POST "$1")
+  # The name is JSON: only a quote or a backslash in it is escaped.
+  name=$(field 1 | sed 's/\\\(.\)/\1/g')
+  me=$(field 3)
+  [ -n "$me" ] || fail "no link of your own in: $out"
+  mkdir -p "$state/$token"
+  file=$state/$token/$(hex "$name")
+  remember "$(field 2)"
+}
 
 cmd=${1:-help}
 [ $# -gt 0 ] && shift
 case $cmd in
-new)
-  link=$(call -X POST "$relay/s")
-  printf '%s\n' "${link##*/s/}"
-  ;;
-join)
-  session "${1:-}"
-  name=${2:-}
-  [ -n "$name" ] || fail "no name: sh byoa join <token> <name>"
-  case $name in *"
+new | join)
+  if [ "$cmd" = new ]; then
+    name=${1:-}
+    [ -n "$name" ] || fail "no name: sh byoa new <name>"
+    session "$(call -X POST "$relay/s")"
+  else
+    session "${1:-}"
+    name=${2:-}
+  fi
+  if [ -n "$own" ]; then
+    enter "$own/join"
+  else
+    [ -n "$name" ] || fail "no name: sh byoa join <token> <name>"
+    case $name in *"
 "*) fail "a name is one line" ;; esac
-  as=$(encode "$name")
-  call -X POST "$link/join?as=$as"
-  # Joining again goes on from where this name had read.
-  read=0
-  case $name in *[!A-Za-z0-9_./-]*) ;; *)
-    read=$(call "$link?as=$as&wait=0" | tail -n 1 |
-      sed -n "s|.*\"$name\":{\"read\":\([0-9]*\).*|\1|p")
-    ;;
-  esac
-  mkdir -p "$state/$token"
-  file=$state/$token/$(hex "$name")
-  remember "${read:-0}"
+    if [ -f "$state/$token/$(hex "$name")" ]; then
+      participant --as "$name"
+      enter "$me/join"
+    else
+      enter "$link/join?as=$(encode "$name")"
+    fi
+  fi
+  if [ "$cmd" = join ]; then printf '%s\n' "$out"; else printf '%s\n' "$token"; fi
   ;;
 send)
   session "${1:-}"
@@ -143,9 +172,9 @@ send)
     [ -f "$1" ] || fail "no such file: $1"
     [ -n "$type" ] || type=$(file -b --mime-type "$1" 2>/dev/null) || type=
     call -H "Content-Type: ${type:-application/octet-stream}" --data-binary "@$1" \
-      "$link?as=$as&filename=$(encode "$(basename "$1")")"
+      "$me?filename=$(encode "$(basename "$1")")"
   else
-    call -H "Content-Type: ${type:-text/plain; charset=utf-8}" --data-binary @- "$link?as=$as"
+    call -H "Content-Type: ${type:-text/plain; charset=utf-8}" --data-binary @- "$me"
   fi
   ;;
 receive)
@@ -172,7 +201,7 @@ receive)
     *) fail "unknown option: $1" ;;
     esac
   done
-  out=$(call "$link?as=$as&after=$read$query")
+  out=$(call "$me?after=$read$query")
   printf '%s\n' "$out"
   last=$(printf '%s\n' "$out" | sed -n 's/^{"n":\([0-9][0-9]*\),.*/\1/p' | tail -n 1)
   [ -z "$last" ] || [ "$last" -le "$read" ] || remember "$last"
@@ -188,18 +217,16 @@ fetch)
   fi
   case ${1:-} in "" | *[!0-9]*) fail "fetch needs an entry number" ;; esac
   if [ -n "${2:-}" ]; then
-    curl -s --fail-with-body -o "$2" "$link/$1?as=$as" || fail "not fetched: $(cat "$2")"
+    curl -s --fail-with-body -o "$2" "$me/$1" || fail "not fetched: $(cat "$2")"
   else
-    curl -s --fail-with-body "$link/$1?as=$as" || exit 1
+    curl -s --fail-with-body "$me/$1" || exit 1
   fi
   ;;
 leave)
   session "${1:-}"
   shift
   participant "$@"
-  call -X POST "$link/leave?as=$as"
-  rm -f "$file"
-  rmdir "$state/$token" 2>/dev/null || true
+  call -X POST "$me/leave"
   ;;
 help | -h | --help) usage ;;
 *)

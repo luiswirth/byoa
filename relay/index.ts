@@ -104,21 +104,22 @@ type Presence = Record<
 	{ read: number; receiving: boolean; since?: string }
 >;
 
-/** A receive that is waiting. `wake` makes it look again, and `stirred`
- * says that someone's presence changed while it waited. */
+/** A waiting receive, attached to its socket, which is tagged with the
+ * participant's name. `done` once it is answered or gone. */
 type Receive = {
-	name: string;
+	after: number;
+	own: boolean;
 	presence: boolean;
-	wake: () => void;
-	stirred: boolean;
+	done?: boolean;
 };
 
-/** One session: its log and its participants in SQLite, payloads that are
- * not inline text in R2. Who is receiving lives only in memory, since no
- * receive outlives the object. */
-export class Session extends DurableObject<Env> {
-	receives = new Map<string, Receive>();
+/** The close code that ends a receive a newer one replaced. */
+const REPLACED = 4409;
 
+/** One session: its log and its participants in SQLite, payloads that are
+ * not inline text in R2. A waiting receive is a socket from the Worker,
+ * which the object sleeps through until it answers it. */
+export class Session extends DurableObject<Env> {
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
 		this.schema();
@@ -163,7 +164,7 @@ export class Session extends DurableObject<Env> {
 	}
 
 	override async alarm(): Promise<void> {
-		if (this.receives.size > 0) await this.expire();
+		if (this.waiting().length > 0) await this.expire();
 		else await this.end();
 	}
 
@@ -184,7 +185,7 @@ export class Session extends DurableObject<Env> {
 		await this.ctx.storage.deleteAlarm();
 		await this.ctx.storage.deleteAll();
 		this.schema();
-		for (const receive of this.receives.values()) receive.wake();
+		for (const socket of this.waiting()) this.answer(socket);
 	}
 
 	override async fetch(request: Request): Promise<Response> {
@@ -206,7 +207,7 @@ export class Session extends DurableObject<Env> {
 		if (operation === "leave" && post) return await this.leave(name);
 		if (!this.inside(name)) return fail(403, "you have not joined");
 		if (!operation && post) return this.send(name, request, url);
-		if (!operation && get) return this.receive(name, request, url);
+		if (!operation && get) return this.receive(name, url);
 		if (operation && /^\d+$/.test(operation) && get) {
 			return this.payload(Number(operation));
 		}
@@ -235,6 +236,7 @@ export class Session extends DurableObject<Env> {
 			n,
 			now(),
 		);
+		this.look();
 		return number(n);
 	}
 
@@ -249,7 +251,7 @@ export class Session extends DurableObject<Env> {
 			n,
 			name,
 		);
-		this.receives.get(name)?.wake();
+		this.look();
 		if (this.sql("SELECT 1 FROM participants WHERE inside = 1").length === 0) {
 			await this.end();
 		}
@@ -285,6 +287,7 @@ export class Session extends DurableObject<Env> {
 			text,
 			object,
 		);
+		this.look();
 		return number(n);
 	}
 
@@ -308,7 +311,6 @@ export class Session extends DurableObject<Env> {
 			text,
 			object,
 		);
-		for (const receive of this.receives.values()) receive.wake();
 		return Number(row?.n);
 	}
 
@@ -335,18 +337,15 @@ export class Session extends DurableObject<Env> {
 		return new Response(object.body, { headers });
 	}
 
-	/** The entries after `after`, and the presence last. Waits until there
-	 * is something to return, at most `wait` seconds. */
-	async receive(name: string, request: Request, url: URL): Promise<Response> {
+	/** Starts a receive: the entries after `after`, and the presence last,
+	 * sent over the socket it returns once there is something to send. */
+	receive(name: string, url: URL): Response {
 		const after = url.searchParams.get("after") ?? "0";
 		const wait = url.searchParams.get("wait");
 		if (!/^\d+$/.test(after)) return fail(400, "after is a number");
-		const seconds = wait === null ? Number.POSITIVE_INFINITY : Number(wait);
-		if (wait === "" || !(seconds >= 0)) {
+		if (wait === "" || (wait !== null && !(Number(wait) >= 0))) {
 			return fail(400, "wait is a number of seconds");
 		}
-		const own = url.searchParams.get("own") === "1";
-		const deadline = Date.now() + seconds * 1000;
 
 		const last = Number(
 			this.sql("SELECT COALESCE(MAX(n), 0) AS n FROM entries")[0]?.n,
@@ -360,80 +359,99 @@ export class Session extends DurableObject<Env> {
 		);
 		if (changed.length > 0) this.stir(name);
 
+		const { 0: client, 1: server } = new WebSocketPair();
 		const receive: Receive = {
-			name,
+			after: Number(after),
+			own: url.searchParams.get("own") === "1",
 			presence: url.searchParams.get("presence") === "1",
-			wake: () => {},
-			stirred: false,
 		};
-		const replaced = this.receives.get(name);
-		this.receives.set(name, receive);
-		if (replaced) replaced.wake();
-		else if (!receive.presence) this.stir(name);
-		// Where the runtime doesn't say that the caller went away, as wrangler
-		// dev doesn't, a receive cut off counts as receiving until the
-		// participant's next one.
-		const abort = () => receive.wake();
-		request.signal.addEventListener("abort", abort);
+		const replaced = this.waiting(name);
+		this.ctx.acceptWebSocket(server, [name]);
+		server.serializeAttachment(receive);
+		for (const socket of replaced) {
+			this.finish(socket);
+			socket.close(REPLACED, "a newer receive replaced this one");
+		}
+		if (replaced.length === 0 && !receive.presence) this.stir(name);
+		if (this.ready(server)) this.answer(server);
+		return new Response(null, { status: 101, webSocket: client });
+	}
 
-		try {
-			for (;;) {
-				if (this.receives.get(name) !== receive) {
-					return fail(409, "a newer receive replaced this one");
-				}
-				const entries = this.inside(name)
-					? this.sql(
-							"SELECT * FROM entries WHERE n > ? AND (? OR sender != ?) ORDER BY n",
-							Number(after),
-							own ? 1 : 0,
-							name,
-						)
-					: [];
-				if (
-					entries.length > 0 ||
-					receive.stirred ||
-					!this.inside(name) ||
-					request.signal.aborted ||
-					Date.now() >= deadline
-				) {
-					const lines = entries.map((row) => JSON.stringify(entry(row)));
-					lines.push(JSON.stringify({ presence: this.presence() }));
-					return new Response(`${lines.join("\n")}\n`, {
-						headers: { "Content-Type": "application/jsonl; charset=utf-8" },
-					});
-				}
-				await new Promise<void>((resolve) => {
-					receive.wake = resolve;
-					if (Number.isFinite(deadline)) {
-						const timer = setTimeout(resolve, deadline - Date.now());
-						receive.wake = () => {
-							clearTimeout(timer);
-							resolve();
-						};
-					}
-				});
-			}
-		} finally {
-			request.signal.removeEventListener("abort", abort);
-			if (this.receives.get(name) === receive) {
-				this.receives.delete(name);
-				this.sql(
-					"UPDATE participants SET since = ? WHERE name = ?",
-					now(),
-					name,
-				);
-				if (!receive.presence) this.stir(name);
-			}
+	/** Any message asks for the answer now, as the Worker does when `wait`
+	 * has passed. */
+	override webSocketMessage(socket: WebSocket): void {
+		this.answer(socket);
+	}
+
+	/** The Worker closes a receive whose caller went away. */
+	override webSocketClose(socket: WebSocket): void {
+		this.finish(socket);
+	}
+
+	attachment(socket: WebSocket): Receive {
+		return socket.deserializeAttachment() as Receive;
+	}
+
+	/** The sockets of the receives still waiting, `name`'s alone if given. */
+	waiting(name?: string): WebSocket[] {
+		return this.ctx
+			.getWebSockets(name)
+			.filter((socket) => !this.attachment(socket).done);
+	}
+
+	entries(socket: WebSocket): Row[] {
+		const [name = ""] = this.ctx.getTags(socket);
+		const { after, own } = this.attachment(socket);
+		if (!this.inside(name)) return [];
+		return this.sql(
+			"SELECT * FROM entries WHERE n > ? AND (? OR sender != ?) ORDER BY n",
+			after,
+			own ? 1 : 0,
+			name,
+		);
+	}
+
+	/** Whether a receive has something to return: entries, or that its
+	 * participant is no longer inside. */
+	ready(socket: WebSocket): boolean {
+		const [name = ""] = this.ctx.getTags(socket);
+		return !this.inside(name) || this.entries(socket).length > 0;
+	}
+
+	answer(socket: WebSocket): void {
+		if (this.attachment(socket).done) return;
+		const lines = this.entries(socket).map((row) => JSON.stringify(entry(row)));
+		lines.push(JSON.stringify({ presence: this.presence() }));
+		this.finish(socket);
+		socket.send(`${lines.join("\n")}\n`);
+		socket.close(1000);
+	}
+
+	/** Ends a receive. Unless a newer one replaced it, its participant is no
+	 * longer receiving. */
+	finish(socket: WebSocket): void {
+		const receive = this.attachment(socket);
+		if (receive.done) return;
+		socket.serializeAttachment({ ...receive, done: true });
+		const [name = ""] = this.ctx.getTags(socket);
+		if (this.waiting(name).length > 0) return;
+		this.sql("UPDATE participants SET since = ? WHERE name = ?", now(), name);
+		if (!receive.presence) this.stir(name);
+	}
+
+	/** Answers the receives that have something to return, once an
+	 * operation is done, so that the presence says what it did. */
+	look(): void {
+		for (const socket of this.waiting()) {
+			if (this.ready(socket)) this.answer(socket);
 		}
 	}
 
-	/** Wakes the receives waiting for presence, except `by`'s own. */
+	/** Answers the receives waiting for presence, except `by`'s own. */
 	stir(by: string): void {
-		for (const receive of this.receives.values()) {
-			if (receive.presence && receive.name !== by) {
-				receive.stirred = true;
-				receive.wake();
-			}
+		for (const socket of this.waiting()) {
+			const [name] = this.ctx.getTags(socket);
+			if (this.attachment(socket).presence && name !== by) this.answer(socket);
 		}
 	}
 
@@ -443,7 +461,7 @@ export class Session extends DurableObject<Env> {
 			"SELECT * FROM participants WHERE inside = 1 ORDER BY name",
 		)) {
 			const name = String(row.name);
-			const receiving = this.receives.has(name);
+			const receiving = this.waiting(name).length > 0;
 			presence[name] = {
 				read: Number(row.read),
 				receiving,
@@ -475,7 +493,7 @@ const newId = () => {
 
 async function route(request: Request, env: Env): Promise<Response> {
 	const url = new URL(request.url);
-	const [, first, id] = url.pathname.split("/");
+	const [, first, id, operation] = url.pathname.split("/");
 	if (request.method === "GET" && url.pathname === "/") {
 		return new Response(people, {
 			headers: { "Content-Type": "text/html; charset=utf-8" },
@@ -502,7 +520,63 @@ async function route(request: Request, env: Env): Promise<Response> {
 		});
 	}
 	if (!/^[\w-]{22}$/.test(id)) return fail(404, "no such session");
-	return env.SESSION.getByName(id).fetch(request);
+	const session = env.SESSION.getByName(id);
+	if (request.method === "GET" && !operation) return receive(request, session);
+	return session.fetch(request);
+}
+
+/** A receive waits here, in the Worker, which costs nothing while it waits,
+ * on a socket to its session, which sleeps until it sends the answer. A
+ * socket that closes with no answer, as when the relay is deployed, is
+ * opened again. */
+async function receive(
+	request: Request,
+	session: DurableObjectStub<Session>,
+): Promise<Response> {
+	const wait = new URL(request.url).searchParams.get("wait");
+	for (;;) {
+		const upgrade = await session.fetch(request.url, {
+			headers: { Upgrade: "websocket" },
+		});
+		const socket = upgrade.webSocket;
+		if (!socket) return upgrade;
+		socket.accept();
+		const answer = await new Promise<Response | null>((resolve) => {
+			const timer =
+				wait === null
+					? undefined
+					: setTimeout(() => socket.send("now"), Number(wait) * 1000);
+			// Where the runtime doesn't say that the caller went away, as
+			// wrangler dev doesn't, a receive cut off counts as receiving until
+			// the participant's next one.
+			const abort = () => {
+				socket.close();
+				settle(null);
+			};
+			const settle = (response: Response | null) => {
+				if (timer !== undefined) clearTimeout(timer);
+				request.signal.removeEventListener("abort", abort);
+				resolve(response);
+			};
+			request.signal.addEventListener("abort", abort);
+			socket.addEventListener("message", (event) =>
+				settle(
+					new Response(String(event.data), {
+						headers: { "Content-Type": "application/jsonl; charset=utf-8" },
+					}),
+				),
+			);
+			socket.addEventListener("close", (event) =>
+				settle(
+					event.code === REPLACED
+						? fail(409, "a newer receive replaced this one")
+						: null,
+				),
+			);
+		});
+		if (answer) return answer;
+		if (request.signal.aborted) return new Response(null);
+	}
 }
 
 export default {

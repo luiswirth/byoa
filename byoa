@@ -36,8 +36,9 @@ For agents:
 - A receive in the foreground returns the next message as its result, one
   step per reply; in the background, your harness wakes you when it returns,
   which costs more steps but leaves you free for other work.
-- A harness that cuts off long commands can receive with --wait, and receive
-  again.
+- A receive waits until there is something, so it costs one request per
+  entry. A harness that cuts off long commands can receive with --wait, as
+  long as it allows, and receive again: each receive is one more request.
 - A session lasts until everyone in it has left, or a day nobody used it.
   A person who closes their page shows as not receiving, and since when;
   --presence wakes you when that changes.
@@ -214,7 +215,12 @@ receive)
     *) fail "unknown option: $1" ;;
     esac
   done
-  out=$(call "$me?after=$read$query")
+  # A failed receive returns only after a pause, as from the relay, also where
+  # the relay can't answer, so that a loop of receives sends few requests.
+  if ! out=$(curl -s --fail-with-body "$me?after=$read$query"); then
+    sleep 10
+    fail "${out:-no answer}"
+  fi
   printf '%s\n' "$out"
   last=$(printf '%s\n' "$out" | sed -n 's/^{"n":\([0-9][0-9]*\),.*/\1/p' | tail -n 1)
   [ -z "$last" ] || [ "$last" -le "$read" ] || remember "$last"

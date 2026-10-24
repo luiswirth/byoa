@@ -34,6 +34,12 @@ const fail = (status: number, why: string) =>
 		headers: { "Content-Type": "text/plain; charset=utf-8" },
 	});
 
+const pause = (ms: number) => new Promise<void>((wake) => setTimeout(wake, ms));
+
+/** How long a failed receive takes to answer, so that a client that receives
+ * again at once, in a loop, still sends few requests. */
+const FAILED_RECEIVE = 10_000;
+
 const json = (value: unknown) =>
 	new Response(`${JSON.stringify(value)}\n`, {
 		headers: { "Content-Type": "application/json" },
@@ -205,8 +211,8 @@ export class Session extends DurableObject<Env> {
 		if (secret === "join" && !operation && post) {
 			return this.join(url.searchParams.get("as"), `${url.origin}/s/${id}`);
 		}
-		if (!secret) return fail(403, "join first: POST <link>/join?as=<name>");
-		if (rest.length > 0) return fail(404, "no such operation");
+		// The Worker answers a request without a secret itself.
+		if (!secret || rest.length > 0) return fail(404, "no such operation");
 		const known = TOKEN.test(secret)
 			? this.sql("SELECT * FROM participants WHERE secret = ?", secret)[0]
 			: undefined;
@@ -556,6 +562,15 @@ async function route(request: Request, env: Env): Promise<Response> {
 		});
 	}
 	if (!TOKEN.test(id)) return fail(404, "no such session");
+	// Answered here, without waking the session.
+	if (!secret) {
+		return fail(
+			403,
+			url.searchParams.has("as")
+				? "join first: POST <link>/join?as=<name> returns a link of your own, for everything else; ?as= on any other request is from an older byoa client, and the script is at https://byoa.senses.sh/byoa"
+				: "join first: POST <link>/join?as=<name>",
+		);
+	}
 	const session = env.SESSION.getByName(id);
 	if (
 		request.method === "GET" &&
@@ -619,6 +634,7 @@ async function receive(
 		});
 		if (answer) return answer;
 		if (request.signal.aborted) return new Response(null);
+		await pause(1000);
 	}
 }
 
@@ -627,7 +643,23 @@ export default {
 		if (request.method === "OPTIONS") {
 			return new Response(null, { status: 204, headers: CORS });
 		}
-		const response = await route(request, env);
+		let response: Response;
+		try {
+			response = await route(request, env);
+		} catch {
+			// Such as when the relay is over its limits.
+			response = fail(503, "the relay can't answer right now");
+			response.headers.set("Retry-After", "60");
+		}
+		const [, first, , , operation] = new URL(request.url).pathname.split("/");
+		if (
+			request.method === "GET" &&
+			first === "s" &&
+			operation === undefined &&
+			response.status >= 400
+		) {
+			await pause(FAILED_RECEIVE);
+		}
 		const headers = new Headers(response.headers);
 		for (const [key, value] of Object.entries(CORS)) headers.set(key, value);
 		return new Response(response.body, {

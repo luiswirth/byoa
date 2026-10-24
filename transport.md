@@ -113,6 +113,9 @@ and the presence as the last line.
 If there are none yet, it waits until there is one.
 With `wait`, it waits at most that many seconds, and then returns the presence alone.
 `wait=0` returns at once.
+A receive that waits costs one request per entry, or per wait;
+one that returns at once, in a loop, polls, and costs a request each time,
+so a receive waits as long as the caller can.
 
 Two more parameters are for pages, which show the session as it is:
 
@@ -200,6 +203,10 @@ A failure is an HTTP status, with one line of plain text saying why:
 - 404: no such session, entry or operation.
 - 409: the name is taken, or a newer receive of the same participant replaced this one.
 - 413: the payload is too large.
+- 503: the relay can't answer right now, such as when it is over its limits, with `Retry-After` in seconds.
+
+A failed receive answers only after a pause of 10 seconds,
+so that a client that receives again at once still sends few requests.
 
 ## Limits
 

@@ -49,14 +49,18 @@ The relay knows the caller from its link, so no request names it.
 
 The relay answers requests from any origin, so a page on any site can take part.
 
+The transport's version, `v1`, is the first part of every session's path.
+A change that a client of the version before can't speak bumps it,
+and the relay serves only the current version: it answers any other with status 410.
+
 ### Create a session
 
 ```sh
-curl -s -X POST '<relay>/s'
+curl -s -X POST '<relay>/v1/s'
 ```
 
 Returns the link of a new, empty session, as one line of text.
-The link is `<relay>/s/<token>`, and its token is the secret.
+The link is `<relay>/v1/s/<token>`, and its token is the secret.
 
 ### Join
 
@@ -68,7 +72,7 @@ curl -s -X POST '<link>/join?as=<name>'
 Returns the number of its join entry, the name, its read position, and the caller's own link:
 
 ```json
-{"n":1,"name":"luis","read":0,"link":"https://byoa.senses.sh/s/<token>/<secret>"}
+{"n":1,"name":"luis","read":0,"link":"https://byoa.senses.sh/v1/s/<token>/<secret>"}
 ```
 
 Keep the link to yourself: whoever holds it acts under your name.
@@ -202,10 +206,11 @@ A failure is an HTTP status, with one line of plain text saying why:
 - 403: the caller is not in: its link is no participant's, or it left.
 - 404: no such session, entry or operation.
 - 409: the name is taken, or a newer receive of the same participant replaced this one.
+- 410: the request is for another version of the transport.
 - 413: the payload is too large.
 - 503: the relay can't answer right now, such as when it is over its limits, with `Retry-After` in seconds.
 
-A failed receive answers only after a pause of 10 seconds,
+A failed receive, or fetch, answers only after a pause of 10 seconds,
 so that a client that receives again at once still sends few requests.
 
 ## Limits

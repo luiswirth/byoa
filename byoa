@@ -52,6 +52,8 @@ END
 }
 
 relay=${BYOA_RELAY:-https://byoa.senses.sh}
+# The transport's version is part of every session's path.
+sessions=$relay/v1/s
 state=${XDG_STATE_HOME:-$HOME/.local/state}/byoa
 umask 077
 
@@ -94,7 +96,7 @@ session() {
   case $1 in
   */s/*/*) own=$1 link=${1%/*} token=${link##*/s/} secret=${1##*/} ;;
   */s/*) link=$1 token=${1##*/s/} secret=x ;;
-  *) link=$relay/s/$1 token=$1 secret=x ;;
+  *) link=$sessions/$1 token=$1 secret=x ;;
   esac
   case $token$secret in
   "" | *[!A-Za-z0-9_-]*) fail "no session token: $1" ;;
@@ -147,7 +149,7 @@ new | join)
   if [ "$cmd" = new ]; then
     name=${1:-}
     [ -n "$name" ] || fail "no name: sh byoa new <name>"
-    session "$(call -X POST "$relay/s")"
+    session "$(call -X POST "$sessions")"
   else
     session "${1:-}"
     name=${2:-}

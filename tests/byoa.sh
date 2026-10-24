@@ -26,7 +26,7 @@ token=$(luis new 'Luis W.')
 check "new" "$(printf %s "$token" | grep -cE '^[A-Za-z0-9_-]{22}$')" 1
 check "new joins" "$(luis receive "$token" --wait 0 | tail -n 1 | grep -o '"Luis W."')" '"Luis W."'
 check "a name taken" "$(claude join "$token" 'Luis W.' 2>&1)" "byoa: Luis W. is taken in this session"
-check "join a link" "$(claude join "$relay/s/$token" luis/claude | cut -c1-37)" '{"n":2,"name":"luis/claude","read":0,'
+check "join a link" "$(claude join "$relay/v1/s/$token" luis/claude | cut -c1-37)" '{"n":2,"name":"luis/claude","read":0,'
 check "send" "$(echo 'Hello.' | luis send "$token")" '{"n":3}'
 check "send markdown" "$(echo '**Hi.**' | luis send "$token" --type text/markdown)" '{"n":4}'
 printf 'a,b\n1,2\n' >"$work/data.csv"
@@ -54,7 +54,7 @@ check "an own link here" "$(echo 'Mine.' | luis send "$token" --as other)" '{"n"
 check "leave the own link" "$(luis leave "$token" --as other)" '{"n":11}'
 
 check "no session" "$(luis join AAAAAAAAAAAAAAAAAAAAAA x 2>&1)" "byoa: no such session"
-check "not joined" "$(luis send "$(curl -s -X POST "$relay/s")" </dev/null 2>&1)" "byoa: not joined: sh byoa join <token> <name>"
+check "not joined" "$(luis send "$(curl -s -X POST "$relay/v1/s")" </dev/null 2>&1)" "byoa: not joined: sh byoa join <token> <name>"
 check "several here need --as" "$(claude leave "$token" 2>&1)" "byoa: several joined this session here: give --as <name>"
 check "leave" "$(claude leave "$token" --as luis/claude)" '{"n":12}'
 check "left" "$(claude receive "$token" --as luis/claude 2>&1)" "byoa: you have left: join again with POST <your link>/join"

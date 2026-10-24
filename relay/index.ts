@@ -19,6 +19,12 @@ const DOCS = new Map([
 const LEAVE = "application/vnd.byoa.leave";
 /** A session's id, and a participant's own part of its link. */
 const TOKEN = /^[\w-]{22}$/;
+/** The transport's version, the first part of every session's path: a
+ * breaking change bumps it, and the relay serves only the current one. */
+const VERSION = "v1";
+/** A session's link. */
+const sessionLink = (origin: string, id: string) =>
+	`${origin}/${VERSION}/s/${id}`;
 
 const CORS = {
 	"Access-Control-Allow-Origin": "*",
@@ -36,7 +42,7 @@ const fail = (status: number, why: string) =>
 
 const pause = (ms: number) => new Promise<void>((wake) => setTimeout(wake, ms));
 
-/** How long a failed receive takes to answer, so that a client that receives
+/** How long a failed receive or fetch takes to answer, so that a client that receives
  * again at once, in a loop, still sends few requests. */
 const FAILED_RECEIVE = 10_000;
 
@@ -205,11 +211,11 @@ export class Session extends DurableObject<Env> {
 		}
 		void this.expire();
 		const url = new URL(request.url);
-		const [, , id, secret, operation, ...rest] = url.pathname.split("/");
+		const [, , , id = "", secret, operation, ...rest] = url.pathname.split("/");
 		const post = request.method === "POST";
 		const get = request.method === "GET";
 		if (secret === "join" && !operation && post) {
-			return this.join(url.searchParams.get("as"), `${url.origin}/s/${id}`);
+			return this.join(url.searchParams.get("as"), sessionLink(url.origin, id));
 		}
 		// The Worker answers a request without a secret itself.
 		if (!secret || rest.length > 0) return fail(404, "no such operation");
@@ -218,7 +224,7 @@ export class Session extends DurableObject<Env> {
 			: undefined;
 		if (!known) return fail(403, "this link is no participant's");
 		const name = String(known.name);
-		const me = `${url.origin}/s/${id}/${secret}`;
+		const me = `${sessionLink(url.origin, id)}/${secret}`;
 		if (operation === "join" && post) return this.rejoin(known, me);
 		if (operation === "leave" && post) return await this.leave(known);
 		if (known.inside !== 1) {
@@ -535,7 +541,7 @@ const token = () => {
 
 async function route(request: Request, env: Env): Promise<Response> {
 	const url = new URL(request.url);
-	const [, first, id, secret, operation] = url.pathname.split("/");
+	const [, version, first, id, secret, operation] = url.pathname.split("/");
 	if (request.method === "GET" && url.pathname === "/") {
 		return new Response(people, {
 			headers: { "Content-Type": "text/html; charset=utf-8" },
@@ -552,25 +558,27 @@ async function route(request: Request, env: Env): Promise<Response> {
 			headers: { "Content-Type": "text/markdown; charset=utf-8" },
 		});
 	}
-	if (first !== "s") return fail(404, "no such page");
+	if (
+		version === "s" ||
+		(/^v\d+$/.test(version ?? "") && version !== VERSION)
+	) {
+		return fail(
+			410,
+			`byoa changed to ${VERSION}, and this request is from an older client: the spec is at ${url.origin}/transport.md, and the script at ${url.origin}/byoa`,
+		);
+	}
+	if (version !== VERSION || first !== "s") return fail(404, "no such page");
 	if (!id) {
 		if (request.method !== "POST") return fail(404, "no such operation");
 		const fresh = token();
 		await env.SESSION.getByName(fresh).create();
-		return new Response(`${url.origin}/s/${fresh}\n`, {
+		return new Response(`${sessionLink(url.origin, fresh)}\n`, {
 			headers: { "Content-Type": "text/plain; charset=utf-8" },
 		});
 	}
 	if (!TOKEN.test(id)) return fail(404, "no such session");
 	// Answered here, without waking the session.
-	if (!secret) {
-		return fail(
-			403,
-			url.searchParams.has("as")
-				? "join first: POST <link>/join?as=<name> returns a link of your own, for everything else; ?as= on any other request is from an older byoa client, and the script is at https://byoa.senses.sh/byoa"
-				: "join first: POST <link>/join?as=<name>",
-		);
-	}
+	if (!secret) return fail(403, "join first: POST <link>/join?as=<name>");
 	const session = env.SESSION.getByName(id);
 	if (
 		request.method === "GET" &&
@@ -651,11 +659,10 @@ export default {
 			response = fail(503, "the relay can't answer right now");
 			response.headers.set("Retry-After", "60");
 		}
-		const [, first, , , operation] = new URL(request.url).pathname.split("/");
+		// A failed receive, or fetch, of any version.
 		if (
 			request.method === "GET" &&
-			first === "s" &&
-			operation === undefined &&
+			/^\/(v\d+\/)?s\//.test(new URL(request.url).pathname) &&
 			response.status >= 400
 		) {
 			await pause(FAILED_RECEIVE);

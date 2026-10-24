@@ -37,7 +37,7 @@ async function checked(response: Response): Promise<Response> {
 
 /** Creates a session on the relay at `relay`, and returns its link. */
 export async function create(relay: string): Promise<string> {
-	const response = await fetch(`${relay.replace(/\/$/, "")}/s`, {
+	const response = await fetch(`${relay.replace(/\/$/, "")}/v1/s`, {
 		method: "POST",
 	});
 	return (await (await checked(response)).text()).trim();

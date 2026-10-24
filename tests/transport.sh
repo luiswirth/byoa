@@ -27,7 +27,7 @@ done
 check "the spec at /transport.md" "$(curl -s "$relay/transport.md" | head -1)" "# The byoa transport"
 check "speech at /speech.md" "$(curl -s "$relay/speech.md" | head -1)" "# Speech"
 
-link=$(curl -s -X POST "$relay/s")
+link=$(curl -s -X POST "$relay/v1/s")
 joined=$(curl -s -X POST "$link/join?as=luis")
 check "join" "$(jq -c '[.n, .name, .read]' <<<"$joined")" '[1,"luis",0]'
 luis=$(jq -r .link <<<"$joined")
@@ -101,7 +101,9 @@ check "read position kept" "$(curl -s "$claude?after=0&wait=0" | tail -1 | jq '.
 
 check "join with no name" "$(status -X POST "$link/join")" 400
 check "bad after" "$(status "$luis?after=x")" 400
-check "no session" "$(status "$relay/s/AAAAAAAAAAAAAAAAAAAAAA/join?as=luis" -X POST)" 404
+check "no session" "$(status "$relay/v1/s/AAAAAAAAAAAAAAAAAAAAAA/join?as=luis" -X POST)" 404
+check "older version" "$(status "$relay/s/AAAAAAAAAAAAAAAAAAAAAA/join?as=luis" -X POST)" 410
+check "other version" "$(status "$relay/v0/s" -X POST)" 410
 check "no entry" "$(status "$luis/99")" 404
 head -c 10485761 /dev/zero >"$work/large"
 check "too large" "$(status --data-binary @"$work/large" "$luis")" 413

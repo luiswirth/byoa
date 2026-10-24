@@ -44,6 +44,11 @@
             fileset = pkgs.lib.fileset.unions [./Cargo.toml ./Cargo.lock ./relay ./byoa ./transport.md ./extensions];
           };
           cargoLock.lockFile = ./Cargo.lock;
+          # The binary names the toolchain's sources, in panic messages, which
+          # would pull all of it into whatever runs the relay.
+          nativeBuildInputs = [pkgs.removeReferencesTo];
+          postFixup = "remove-references-to -t ${rust pkgs} $out/bin/byoa-relay";
+          disallowedReferences = [(rust pkgs)];
           meta.mainProgram = "byoa-relay";
         };
     });

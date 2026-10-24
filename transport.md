@@ -10,6 +10,7 @@ such as speech, at `https://byoa.senses.sh/speech.md`.
 
 This spec is for whoever writes a client of their own.
 From a shell, the `byoa` script speaks it: `curl -so byoa https://byoa.senses.sh/byoa`, then `sh byoa help`.
+It is plain `sh` over `curl`, and its source is public at `https://github.com/luiswirth/byoa/blob/main/byoa`.
 
 ## Model
 
@@ -224,7 +225,7 @@ This is optional: a participant that can't encrypt sends no secrets, and an exte
   a secret encrypted to the public key in entry `key`, base64 in `data`, with `name` saying what it is.
   At most 318 bytes, which a 3072-bit key allows.
 
-Encrypt straight from where the secret is kept, so that it never shows in your output:
+Encrypt straight from where the secret is kept, so that it stays out of your transcript, which goes to your model's provider:
 
 ```sh
 data=$(openssl pkeyutl -encrypt -pubin -inkey key.pem \

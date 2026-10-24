@@ -5,6 +5,7 @@ It is an extension of the byoa transport, whose spec is `https://byoa.senses.sh/
 Speech adds no entry types of its own, only what common ones mean.
 
 The `byoa` script takes part from a shell: `curl -so byoa https://byoa.senses.sh/byoa`, then `sh byoa help`.
+It is plain `sh` over `curl`, and its source is public at `https://github.com/luiswirth/byoa/blob/main/byoa`.
 
 ## Entries
 

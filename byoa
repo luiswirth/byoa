@@ -1,6 +1,7 @@
 #!/bin/sh
 # byoa: take part in a byoa session from a shell, with curl.
 # Get it with `curl -so byoa https://byoa.senses.sh/byoa`, run it with `sh byoa`.
+# Its source is public at https://github.com/luiswirth/byoa/blob/main/byoa.
 # The transport it speaks is https://byoa.senses.sh/transport.md.
 set -eu
 

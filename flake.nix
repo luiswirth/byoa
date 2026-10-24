@@ -2,24 +2,52 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
+    rust-overlay.url = "github:oxalica/rust-overlay";
+    rust-overlay.inputs.nixpkgs.follows = "nixpkgs";
+
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = {
     nixpkgs,
+    rust-overlay,
     treefmt-nix,
     ...
   }: let
     forEachSystem = f:
       nixpkgs.lib.genAttrs ["aarch64-darwin" "x86_64-linux"]
-      (system: f nixpkgs.legacyPackages.${system});
+      (system:
+        f (import nixpkgs {
+          inherit system;
+          overlays = [(import rust-overlay)];
+        }));
+
+    # The one toolchain, which the shell and the package share.
+    rust = pkgs: pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
 
     # One environment, entered by the shell and by the checks alike. The
-    # compiler and the type definitions are pinned by pnpm instead, since
-    # editors look for them in node_modules.
-    tools = pkgs: with pkgs; [nodejs pnpm biome just curl jq openssl];
+    # TypeScript compiler is pinned by pnpm instead, since editors look for it
+    # in node_modules.
+    tools = pkgs: with pkgs; [(rust pkgs) nodejs pnpm biome just curl jq openssl];
   in {
+    packages = forEachSystem (pkgs: {
+      default =
+        (pkgs.makeRustPlatform {
+          cargo = rust pkgs;
+          rustc = rust pkgs;
+        }).buildRustPackage {
+          pname = "byoa-relay";
+          version = "0.1.0";
+          src = pkgs.lib.fileset.toSource {
+            root = ./.;
+            fileset = pkgs.lib.fileset.unions [./Cargo.toml ./Cargo.lock ./relay ./byoa ./transport.md ./extensions];
+          };
+          cargoLock.lockFile = ./Cargo.lock;
+          meta.mainProgram = "byoa-relay";
+        };
+    });
+
     # Every language in the tree, behind one command. The global pre-commit
     # hook checks a repository by running this, so a language left out here is
     # a language nothing checks.
@@ -34,6 +62,7 @@
         programs.biome.validate.enable = false;
         programs.biome.settings = removeAttrs (builtins.fromJSON (builtins.readFile ./biome.json)) ["vcs"];
         programs.alejandra.enable = true;
+        programs.rustfmt.enable = true;
         programs.just.enable = true;
         programs.shellcheck.enable = true;
         # direnv reads it, no shell runs it.

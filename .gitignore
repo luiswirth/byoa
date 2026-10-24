@@ -1,4 +1,3 @@
 node_modules/
 .direnv/
-.wrangler/
-relay/env.d.ts
+target/

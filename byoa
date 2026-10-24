@@ -10,7 +10,7 @@ usage() {
 byoa: take part in a byoa session.
 
   sh byoa new <name>                   start a session, join it under a name,
-                                       and print its token
+                                       and print its link
   sh byoa join <token> <name>          join a session under a name, such as luis/claude
   sh byoa join <your link>             join as the participant of your own link
   sh byoa send <token> [--type <type>] [<file>]
@@ -167,7 +167,7 @@ new | join)
       enter "$link/join?as=$(encode "$name")"
     fi
   fi
-  if [ "$cmd" = join ]; then printf '%s\n' "$out"; else printf '%s\n' "$token"; fi
+  if [ "$cmd" = join ]; then printf '%s\n' "$out"; else printf '%s\n' "$link"; fi
   ;;
 send)
   session "${1:-}"

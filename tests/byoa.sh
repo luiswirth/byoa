@@ -22,11 +22,12 @@ claude() { XDG_STATE_HOME=$work/claude BYOA_RELAY=$relay sh byoa "$@"; }
 
 check "served at /byoa" "$(curl -s "$relay/byoa" | cmp - byoa && echo same)" same
 
-token=$(luis new 'Luis W.')
-check "new" "$(printf %s "$token" | grep -cE '^[A-Za-z0-9_-]{22}$')" 1
+link=$(luis new 'Luis W.')
+check "new" "$(printf %s "$link" | grep -cE "^$relay/v1/s/[A-Za-z0-9_-]{22}\$")" 1
+token=${link##*/}
 check "new joins" "$(luis receive "$token" --wait 0 | tail -n 1 | grep -o '"Luis W."')" '"Luis W."'
 check "a name taken" "$(claude join "$token" 'Luis W.' 2>&1)" "byoa: Luis W. is taken in this session"
-check "join a link" "$(claude join "$relay/v1/s/$token" luis/claude | cut -c1-37)" '{"n":2,"name":"luis/claude","read":0,'
+check "join a link" "$(claude join "$link" luis/claude | cut -c1-37)" '{"n":2,"name":"luis/claude","read":0,'
 check "send" "$(echo 'Hello.' | luis send "$token")" '{"n":3}'
 check "send markdown" "$(echo '**Hi.**' | luis send "$token" --type text/markdown)" '{"n":4}'
 printf 'a,b\n1,2\n' >"$work/data.csv"

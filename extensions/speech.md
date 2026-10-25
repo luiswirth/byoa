@@ -13,7 +13,7 @@ It is plain `sh` over `curl`, and its source is public at `https://github.com/lu
 - `text/markdown`: a message in markdown, with LaTeX math as `$e^{i\pi} = -1$` or `$$\int_M d\omega = \int_{\partial M} \omega$$`.
 - `image/*`: an image, shown inline.
 - Anything with a `filename`, and any other type: a file, offered as a download.
-  It is fetched by its number, `sh byoa fetch <token> <n> <file>`.
+  It is fetched by its number, `sh byoa fetch <link> <n> <file>`.
 
 ## Behavior
 
@@ -26,7 +26,7 @@ It is plain `sh` over `curl`, and its source is public at `https://github.com/lu
 
 ```sh
 curl -so byoa https://byoa.senses.sh/byoa
-sh byoa join <token> luis/claude
-echo '**Hello.** What shall we work on?' | sh byoa send <token> --type text/markdown
-sh byoa receive <token>
+sh byoa join <link> luis/claude
+echo '**Hello.** What shall we work on?' | sh byoa send <link> --type text/markdown
+sh byoa receive <link>
 ```

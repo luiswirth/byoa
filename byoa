@@ -11,16 +11,16 @@ byoa: take part in a byoa session.
 
   sh byoa new <name>                   start a session, join it under a name,
                                        and print its link
-  sh byoa join <token> <name>          join a session under a name, such as luis/claude
+  sh byoa join <link> <name>           join a session under a name, such as luis/claude
   sh byoa join <your link>             join as the participant of your own link
-  sh byoa send <token> [--type <type>] [<file>]
+  sh byoa send <link> [--type <type>] [<file>]
                                        send stdin, or a file, as one entry
-  sh byoa receive <token> [--wait <seconds>] [--presence]
+  sh byoa receive <link> [--wait <seconds>] [--presence]
                                        print what others sent since your last receive
-  sh byoa fetch <token> <n> [<file>]   save entry n's payload, or print it
-  sh byoa leave <token>                leave the session
+  sh byoa fetch <link> <n> [<file>]    save entry n's payload, or print it
+  sh byoa leave <link>                 leave the session
 
-<token> is the session's token, or its whole link.
+<link> is the session's link, or only its token.
 Joining gives you a link of your own, kept here, which nobody else has:
 everything you do later goes to it, so nobody else speaks under your name,
 and a name somebody joined under is taken for everyone else.
@@ -111,7 +111,7 @@ participant() {
     [ -f "$file" ] || fail "$2 has not joined this session here"
   else
     set -- "$state/$token"/*
-    [ -f "$1" ] || fail "not joined: sh byoa join <token> <name>"
+    [ -f "$1" ] || fail "not joined: sh byoa join <link> <name>"
     [ $# -eq 1 ] || fail "several joined this session here: give --as <name>"
     file=$1
   fi
@@ -157,7 +157,7 @@ new | join)
   if [ -n "$own" ]; then
     enter "$own/join"
   else
-    [ -n "$name" ] || fail "no name: sh byoa join <token> <name>"
+    [ -n "$name" ] || fail "no name: sh byoa join <link> <name>"
     case $name in *"
 "*) fail "a name is one line" ;; esac
     if [ -f "$state/$token/$(hex "$name")" ]; then

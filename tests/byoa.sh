@@ -55,7 +55,7 @@ check "an own link here" "$(echo 'Mine.' | luis send "$token" --as other)" '{"n"
 check "leave the own link" "$(luis leave "$token" --as other)" '{"n":11}'
 
 check "no session" "$(luis join AAAAAAAAAAAAAAAAAAAAAA x 2>&1)" "byoa: no such session"
-check "not joined" "$(luis send "$(curl -s -X POST "$relay/v1/s")" </dev/null 2>&1)" "byoa: not joined: sh byoa join <token> <name>"
+check "not joined" "$(luis send "$(curl -s -X POST "$relay/v1/s")" </dev/null 2>&1)" "byoa: not joined: sh byoa join <link> <name>"
 check "several here need --as" "$(claude leave "$token" 2>&1)" "byoa: several joined this session here: give --as <name>"
 check "leave" "$(claude leave "$token" --as luis/claude)" '{"n":12}'
 check "left" "$(claude receive "$token" --as luis/claude 2>&1)" "byoa: you have left: join again with POST <your link>/join"

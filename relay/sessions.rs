@@ -61,13 +61,17 @@ pub struct Sessions {
 
 /// What a receive asks for.
 pub struct Receive {
-    pub after: i64,
+    /// The entries after this number, or with none, after the caller's read
+    /// position.
+    pub after: Option<i64>,
     pub own: bool,
     pub presence: bool,
 }
 
 struct Waiting {
     id: u64,
+    /// The receive's `after`, resolved.
+    after: i64,
     receive: Receive,
     answer: oneshot::Sender<Answer>,
 }
@@ -398,7 +402,7 @@ impl Sessions {
 
     /// Starts a receive, which is answered once it has something to return.
     /// Receiving after `n` moves the read position up to `n`, never beyond
-    /// the last entry.
+    /// the last entry; with no `n`, it receives after the read position.
     pub fn receive(
         &mut self,
         session: &str,
@@ -406,13 +410,20 @@ impl Sessions {
         receive: Receive,
     ) -> Result<(Ticket, oneshot::Receiver<Answer>), Fail> {
         let name = self.inside(session, secret)?;
+        let after = match receive.after {
+            Some(after) => after,
+            None => self
+                .db
+                .prepare_cached("SELECT read FROM participants WHERE session = ? AND name = ?")?
+                .query_row(params![session, name], |row| row.get(0))?,
+        };
         let last: i64 = self
             .db
             .prepare_cached("SELECT COALESCE(MAX(n), 0) FROM entries WHERE session = ?")?
             .query_row([session], |row| row.get(0))?;
         let moved = self.db.execute(
             "UPDATE participants SET read = ?1 WHERE session = ?2 AND name = ?3 AND read < ?1",
-            params![receive.after.min(last), session, name],
+            params![after.min(last), session, name],
         )?;
         if moved > 0 {
             self.stir(session, &name)?;
@@ -426,6 +437,7 @@ impl Sessions {
             name.clone(),
             Waiting {
                 id,
+                after,
                 receive,
                 answer,
             },
@@ -500,12 +512,7 @@ impl Sessions {
             .prepare_cached(
                 "SELECT 1 FROM entries WHERE session = ? AND n > ? AND (? OR sender != ?)",
             )?
-            .exists(params![
-                session,
-                waiting.receive.after,
-                waiting.receive.own,
-                name
-            ])
+            .exists(params![session, waiting.after, waiting.receive.own, name])
     }
 
     /// Answers `name`'s receive with the entries it asks for, and the
@@ -516,7 +523,7 @@ impl Sessions {
         };
         let mut lines = String::new();
         if self.is_inside(session, name)? {
-            let Receive { after, own, .. } = waiting.receive;
+            let (after, own) = (waiting.after, waiting.receive.own);
             let mut entries = self.db.prepare_cached(
                 "SELECT n, time, sender, type, size, filename, text FROM entries
                  WHERE session = ? AND n > ? AND (? OR sender != ?) ORDER BY n",
@@ -534,6 +541,18 @@ impl Sessions {
                 };
                 lines += &serde_json::to_string(&entry).expect("an entry is JSON");
                 lines.push('\n');
+            }
+            drop(rows);
+            drop(entries);
+            // A receive from the read position acknowledges what it returns,
+            // since its caller keeps no position of its own.
+            if waiting.receive.after.is_none() {
+                self.db.execute(
+                    "UPDATE participants SET read = last FROM
+                     (SELECT COALESCE(MAX(n), 0) AS last FROM entries WHERE session = ?1)
+                     WHERE session = ?1 AND name = ?2 AND read < last",
+                    params![session, name],
+                )?;
             }
         }
         let presence = serde_json::json!({ "presence": self.presence(session)? });

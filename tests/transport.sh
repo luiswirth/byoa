@@ -68,6 +68,8 @@ curl -s --data-binary 'Still there?' "$luis" >/dev/null
 wait "$waiting"
 check "a waiting receive wakes" "$(head -1 "$work/waited" | jq -r .text)" "Still there?"
 check "not receiving" "$(curl -s "$luis?wait=0" | tail -1 | jq '.presence["luis/claude"].receiving')" false
+check "receive from the read position" "$(curl -s "$claude?wait=0" | head -n -1 | jq -r .n | xargs)" 6
+check "a receive from the read position acknowledges" "$(curl -s "$claude?wait=0" | tail -1 | jq '.presence["luis/claude"].read')" 6
 
 check "wait returns presence alone" "$(curl -s "$claude?after=6&wait=1" | jq -c 'keys')" '["presence"]'
 

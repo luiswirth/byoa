@@ -341,8 +341,8 @@ async fn read_at_most(mut body: Body, limit: usize) -> Result<Option<Vec<u8>>, F
 
 async fn receive(relay: &Relay, id: &str, secret: &str, query: &str) -> Result<Response, Fail> {
     let after = match param(query, "after") {
-        None => 0,
-        Some(after) => number(&after).ok_or_else(|| fail(400, "after is a number"))?,
+        None => None,
+        Some(after) => Some(number(&after).ok_or_else(|| fail(400, "after is a number"))?),
     };
     // A wait too long to represent is no limit.
     let wait = match param(query, "wait") {

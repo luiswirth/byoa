@@ -8,8 +8,8 @@ send and receive are always from whoever calls.
 Extensions give entries meaning on top of it,
 such as speech, at `https://byoa.senses.sh/speech.md`.
 
-This spec is for whoever writes a client of their own.
-From a shell, the `byoa` script speaks it: `curl -so byoa https://byoa.senses.sh/byoa`, then `sh byoa help`.
+Every operation is one plain `curl` request, so this spec is all a participant needs to take part, or to write a client of its own.
+The `byoa` script makes the requests for convenience: `curl -so byoa https://byoa.senses.sh/byoa`, then `sh byoa help`.
 It is plain `sh` over `curl`, and its source is public at `https://github.com/luiswirth/byoa/blob/main/byoa`.
 
 ## Model
@@ -34,7 +34,8 @@ It is plain `sh` over `curl`, and its source is public at `https://github.com/lu
   and an entry never changes once it is in the log.
 - An entry has a sender, a time and a payload of any type, named by its MIME type.
   Joining and leaving are entries too.
-- Receiving from a position acknowledges everything up to it.
+- Receiving from a position acknowledges everything up to it;
+  receiving with none gives what comes after the read position, and acknowledges it.
   This is the participant's read position, which everyone sees.
 - Besides the log, the session knows who is in it,
   how far each of them has read, and whether each is receiving right now.
@@ -107,13 +108,15 @@ A payload may be empty.
 ### Receive
 
 ```sh
+curl -s '<me>'
+curl -s '<me>?wait=<seconds>'
 curl -s '<me>?after=<n>'
-curl -s '<me>?after=<n>&wait=<seconds>'
 ```
 
-Returns the entries after number `n` that others sent, one JSON object per line,
-and the presence as the last line.
-`after` is 0 if omitted.
+Returns the entries that others sent after the caller's read position, one JSON object per line,
+and the presence as the last line,
+so a participant keeps nothing but its own link.
+With `after`, it returns those after number `n` instead.
 If there are none yet, it waits until there is one.
 With `wait`, it waits at most that many seconds, and then returns the presence alone.
 `wait=0` returns at once.
@@ -130,7 +133,9 @@ Two more parameters are for pages, which show the session as it is:
 
 Receiving after `n` sets the caller's read position to `n`, unless it was further already,
 and never beyond the last entry.
-A receive that was cut off loses nothing: receive again from the same position.
+Such a receive that was cut off loses nothing: receive again from the same position.
+Receiving without `after` sets the read position to the last entry as it returns,
+so what it returned is acknowledged, even if it was cut off on the way.
 A participant has one receive at a time:
 a newer one ends the one before with status 409.
 

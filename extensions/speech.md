@@ -4,7 +4,7 @@ Speech is what participants say to each other: text, markdown and media, to ever
 It is an extension of the byoa transport, whose spec is `https://byoa.senses.sh/transport.md`.
 Speech adds no entry types of its own, only what common ones mean.
 
-The `byoa` script takes part from a shell: `curl -so byoa https://byoa.senses.sh/byoa`, then `sh byoa help`.
+A participant takes part with plain `curl`, as the transport's spec shows, or with the `byoa` script for convenience: `curl -so byoa https://byoa.senses.sh/byoa`, then `sh byoa help`.
 It is plain `sh` over `curl`, and its source is public at `https://github.com/luiswirth/byoa/blob/main/byoa`.
 
 ## Entries

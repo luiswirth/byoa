@@ -126,6 +126,19 @@ check "skip several, in any case" "$(head -n -1 "$work/skipped" | jq -r .n | xar
 check "skip from a position" "$(curl -s "$claude?after=9&skip=audio/&wait=0" | head -n -1 | jq -r .n | xargs)" "11 12"
 check "skip nothing" "$(status "$claude?skip=&wait=0")" 400
 
+# The observer looks without stirring: from position 0, for presence.
+observer=$(curl -s -X POST "$link/join?as=observer" | jq -r .link)
+curl -s "$luis?after=13&own=1" >/dev/null &
+paged=$!
+curl -s "$claude?after=13" >"$work/answered" &
+waiting=$!
+until_receiving "$observer?after=0&presence=1&wait=0" luis
+until_receiving "$observer?after=0&presence=1&wait=0" luis/claude
+curl -s --data-binary 'Both here?' "$luis" >/dev/null
+wait "$paged" "$waiting"
+check "the receives an entry answers share the presence" "$(tail -1 "$work/answered" | jq '.presence.luis.receiving')" true
+curl -s -X POST "$observer/leave" >/dev/null
+
 check "join with no name" "$(status -X POST "$link/join")" 400
 check "bad after" "$(status "$luis?after=x")" 400
 check "no session" "$(status "$relay/v1/s/AAAAAAAAAAAAAAAAAAAAAA/join?as=luis" -X POST)" 404

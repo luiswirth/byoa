@@ -535,8 +535,40 @@ impl Sessions {
     /// Answers `name`'s receive with the entries it asks for, and the
     /// presence last.
     fn answer(&mut self, session: &str, name: &str) -> Result<(), Fail> {
+        self.answer_all(session, &[name.to_owned()])
+    }
+
+    /// Answers the receives of `names` together: they all carry the presence
+    /// from before any of them ended, so that none shows another as gone
+    /// only because the same operation answered it first.
+    fn answer_all(&mut self, session: &str, names: &[String]) -> Result<(), Fail> {
+        let mut answers = Vec::new();
+        for name in names {
+            if let Some(lines) = self.entries_for(session, name)? {
+                answers.push((name, lines));
+            }
+        }
+        let presence = serde_json::json!({ "presence": self.presence(session)? });
+        let mut taken = Vec::new();
+        for (name, mut lines) in answers {
+            lines += &presence.to_string();
+            lines.push('\n');
+            if let Some(waiting) = self.take(session, name) {
+                _ = waiting.answer.send(Answer::Lines(lines));
+                taken.push((name, waiting.receive));
+            }
+        }
+        for (name, receive) in taken {
+            self.finish(session, name, &receive)?;
+        }
+        Ok(())
+    }
+
+    /// The entries `name`'s waiting receive asks for, one line each, and
+    /// acknowledges them; none if it isn't waiting.
+    fn entries_for(&mut self, session: &str, name: &str) -> Result<Option<String>, Fail> {
         let Some(waiting) = self.waiting.get(session).and_then(|w| w.get(name)) else {
-            return Ok(());
+            return Ok(None);
         };
         let mut lines = String::new();
         if self.is_inside(session, name)? {
@@ -576,14 +608,7 @@ impl Sessions {
                 )?;
             }
         }
-        let presence = serde_json::json!({ "presence": self.presence(session)? });
-        lines += &presence.to_string();
-        lines.push('\n');
-        if let Some(waiting) = self.take(session, name) {
-            _ = waiting.answer.send(Answer::Lines(lines));
-            self.finish(session, name, &waiting.receive)?;
-        }
-        Ok(())
+        Ok(Some(lines))
     }
 
     /// Ends a receive: its participant is no longer receiving.
@@ -601,27 +626,26 @@ impl Sessions {
     /// Answers the receives that have something to return, once an operation
     /// is done, so that the presence says what it did.
     fn look(&mut self, session: &str) -> Result<(), Fail> {
+        let mut ready = Vec::new();
         for name in self.names_waiting(session) {
             if self.ready(session, &name)? {
-                self.answer(session, &name)?;
+                ready.push(name);
             }
         }
-        Ok(())
+        self.answer_all(session, &ready)
     }
 
     /// Answers the receives waiting for presence, except `by`'s own.
     fn stir(&mut self, session: &str, by: &str) -> Result<(), Fail> {
-        for name in self.names_waiting(session) {
-            let presence = self
-                .waiting
-                .get(session)
-                .and_then(|w| w.get(&name))
-                .is_some_and(|waiting| waiting.receive.presence);
-            if presence && name != by {
-                self.answer(session, &name)?;
-            }
-        }
-        Ok(())
+        let stirred: Vec<String> = self
+            .waiting
+            .get(session)
+            .into_iter()
+            .flatten()
+            .filter(|(name, waiting)| waiting.receive.presence && name.as_str() != by)
+            .map(|(name, _)| name.clone())
+            .collect();
+        self.answer_all(session, &stirred)
     }
 
     fn presence(&self, session: &str) -> rusqlite::Result<BTreeMap<String, Presence>> {

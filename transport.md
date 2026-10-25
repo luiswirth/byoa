@@ -202,6 +202,10 @@ everyone in the session, with their read position, and whether they are receivin
 - `receiving`: whether a receive of theirs is waiting right now.
 - `since`: if not, when their last receive ended, or when they joined.
 
+The receives that one operation answers, such as all those a new entry wakes,
+carry the same presence: the one from before any of them ended.
+So a page that receives its own entries still shows as receiving next to its own message.
+
 There are no heartbeats and no timeouts.
 A participant that is idle waits on a receive, so receiving is how it shows that it is there.
 One that is not receiving is busy, or gone: the presence states the facts,

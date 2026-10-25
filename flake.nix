@@ -10,6 +10,7 @@
   };
 
   outputs = {
+    self,
     nixpkgs,
     rust-overlay,
     treefmt-nix,
@@ -52,6 +53,8 @@
           meta.mainProgram = "byoa-relay";
         };
     });
+
+    nixosModules.relay = import ./nixos-module.nix self;
 
     # Every language in the tree, behind one command. The global pre-commit
     # hook checks a repository by running this, so a language left out here is

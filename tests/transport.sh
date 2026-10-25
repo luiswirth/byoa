@@ -19,6 +19,15 @@ status() {
   curl -s -o /dev/null -w '%{http_code}' "$@"
 }
 
+# Receives at $1 until the presence shows $2 receiving, for at most 50 tries:
+# a receive sent in the background is waiting only once the relay has it.
+until_receiving() {
+  for _ in $(seq 50); do
+    [ "$(curl -s "$1" | tail -1 | jq ".presence[\"$2\"].receiving")" = true ] && return
+    sleep 0.1
+  done
+}
+
 for _ in $(seq 60); do
   curl -sf -o /dev/null "$relay/transport.md" && break
   sleep 0.5
@@ -62,7 +71,7 @@ check "fetch a join" "$(curl -s "$claude/1" | wc -c)" 0
 
 curl -s "$claude?after=5" >"$work/waited" &
 waiting=$!
-sleep 1
+until_receiving "$luis?after=0&wait=0" luis/claude
 check "receiving" "$(curl -s "$luis?wait=0" | tail -1 | jq -c '.presence["luis/claude"]')" '{"read":5,"receiving":true}'
 curl -s --data-binary 'Still there?' "$luis" >/dev/null
 wait "$waiting"
@@ -75,7 +84,7 @@ check "wait returns presence alone" "$(curl -s "$claude?after=6&wait=1" | jq -c 
 
 curl -s -o /dev/null -w '%{http_code}' "$claude?after=6" >"$work/replaced" &
 waiting=$!
-sleep 1
+until_receiving "$luis?after=0&wait=0" luis/claude
 curl -s "$claude?after=6&wait=0" >/dev/null
 wait "$waiting"
 check "a newer receive replaces" "$(cat "$work/replaced")" 409
@@ -84,14 +93,14 @@ check "own entries" "$(curl -s "$luis?after=2&wait=0&own=1" | head -n -1 | jq -r
 
 curl -s "$luis?after=6&own=1&presence=1" >"$work/stirred" &
 waiting=$!
-sleep 1
-curl -s "$claude?after=6&wait=0" >/dev/null
+# The receive that stirs is the one that sees luis receiving.
+until_receiving "$claude?after=6&wait=0" luis
 wait "$waiting"
 check "presence wakes" "$(jq -c 'keys' "$work/stirred")" '["presence"]'
 
 curl -s -o /dev/null -w '%{http_code}' "$claude?after=6" >"$work/left" &
 waiting=$!
-sleep 1
+until_receiving "$luis?after=0&wait=0" luis/claude
 check "leave" "$(curl -s -X POST "$claude/leave")" '{"n":7}'
 wait "$waiting"
 check "leaving ends a receive" "$(cat "$work/left")" 200
@@ -107,7 +116,7 @@ check "a skipped entry neither returns nor wakes" "$(curl -s "$claude?skip=appli
 check "a skipped entry is acknowledged" "$(curl -s "$luis?wait=0" | tail -1 | jq '.presence["luis/claude"].read')" 9
 curl -s "$claude?skip=audio/&skip=Application/VND.byoa.voice.trace" >"$work/skipped" &
 waiting=$!
-sleep 1
+until_receiving "$luis?after=0&wait=0" luis/claude
 curl -s -H 'Content-Type: audio/wav' --data-binary 'RIFF' "$luis?filename=heard.wav" >/dev/null
 curl -s -H "Content-Type: $trace" --data-binary '[]' "$luis" >/dev/null
 check "skipped entries don't wake" "$(curl -s "$luis?wait=0" | tail -1 | jq '.presence["luis/claude"].receiving')" true

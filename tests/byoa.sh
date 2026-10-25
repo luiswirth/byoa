@@ -53,11 +53,14 @@ me=$(sed -n 3p "$work/claude/byoa/$token"/*"$(printf other | od -An -tx1 -v | tr
 check "join with an own link" "$(luis join "$me" | cut -c1-31)" '{"n":9,"name":"other","read":0,'
 check "an own link here" "$(echo 'Mine.' | luis send "$token" --as other)" '{"n":10}'
 check "leave the own link" "$(luis leave "$token" --as other)" '{"n":11}'
+claude receive "$token" --as luis/claude --wait 0 >/dev/null
+echo '[]' | luis send "$token" --as 'Luis W.' --type application/vnd.byoa.voice.trace+json >/dev/null
+check "receive --skip" "$(claude receive "$token" --as luis/claude --skip application/vnd.byoa.voice.trace --wait 0 | wc -l | tr -d ' ')" 1
 
 check "no session" "$(luis join AAAAAAAAAAAAAAAAAAAAAA x 2>&1)" "byoa: no such session"
 check "not joined" "$(luis send "$(curl -s -X POST "$relay/v1/s")" </dev/null 2>&1)" "byoa: not joined: sh byoa join <link> <name>"
 check "several here need --as" "$(claude leave "$token" 2>&1)" "byoa: several joined this session here: give --as <name>"
-check "leave" "$(claude leave "$token" --as luis/claude)" '{"n":12}'
+check "leave" "$(claude leave "$token" --as luis/claude)" '{"n":13}'
 check "left" "$(claude receive "$token" --as luis/claude 2>&1)" "byoa: you have left: join again with POST <your link>/join"
 luis leave "$token" --as "Luis W." >/dev/null
 

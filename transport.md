@@ -111,6 +111,7 @@ A payload may be empty.
 curl -s '<me>'
 curl -s '<me>?wait=<seconds>'
 curl -s '<me>?after=<n>'
+curl -s '<me>?skip=<type>'
 ```
 
 Returns the entries that others sent after the caller's read position, one JSON object per line,
@@ -120,6 +121,9 @@ With `after`, it returns those after number `n` instead.
 If there are none yet, it waits until there is one.
 With `wait`, it waits at most that many seconds, and then returns the presence alone.
 `wait=0` returns at once.
+With `skip`, it leaves out the entries whose type starts with `<type>`, URL-encoded and in any case,
+and doesn't return for them, so that it wakes the caller only for what it wants;
+give it once for each type, such as `skip=audio/&skip=application/vnd.byoa.voice.trace`.
 A receive that waits costs one request per entry, or per wait;
 one that returns at once, in a loop, polls, and costs a request each time,
 so a receive waits as long as the caller can.
@@ -135,7 +139,7 @@ Receiving after `n` sets the caller's read position to `n`, unless it was furthe
 and never beyond the last entry.
 Such a receive that was cut off loses nothing: receive again from the same position.
 Receiving without `after` sets the read position to the last entry as it returns,
-so what it returned is acknowledged, even if it was cut off on the way.
+so what it returned, and what it skipped, is acknowledged, even if it was cut off on the way.
 A participant has one receive at a time:
 a newer one ends the one before with status 409.
 
@@ -207,7 +211,7 @@ and what they mean is for whoever reads them to judge.
 
 A failure is an HTTP status, with one line of plain text saying why:
 
-- 400: the request is malformed, such as a join with no name, or an `after` that is no number.
+- 400: the request is malformed, such as a join with no name, an `after` that is no number, or an empty `skip`.
 - 403: the caller is not in: its link is no participant's, or it left.
 - 404: no such session, entry or operation.
 - 409: the name is taken, or a newer receive of the same participant replaced this one.

@@ -101,6 +101,22 @@ check "a name stays taken" "$(status -X POST "$link/join?as=luis/claude")" 409
 check "rejoin" "$(curl -s -X POST "$claude/join" | jq -c '[.n, .read, .link == "'"$claude"'"]')" '[8,6,true]'
 check "read position kept" "$(curl -s "$claude?after=0&wait=0" | tail -1 | jq '.presence["luis/claude"].read')" 6
 
+trace='application/vnd.byoa.voice.trace+json'
+curl -s -H "Content-Type: $trace" --data-binary '[]' "$luis" >/dev/null
+check "a skipped entry neither returns nor wakes" "$(curl -s "$claude?skip=application/vnd.byoa.voice.trace&wait=1" | jq -c 'keys')" '["presence"]'
+check "a skipped entry is acknowledged" "$(curl -s "$luis?wait=0" | tail -1 | jq '.presence["luis/claude"].read')" 9
+curl -s "$claude?skip=audio/&skip=Application/VND.byoa.voice.trace" >"$work/skipped" &
+waiting=$!
+sleep 1
+curl -s -H 'Content-Type: audio/wav' --data-binary 'RIFF' "$luis?filename=heard.wav" >/dev/null
+curl -s -H "Content-Type: $trace" --data-binary '[]' "$luis" >/dev/null
+check "skipped entries don't wake" "$(curl -s "$luis?wait=0" | tail -1 | jq '.presence["luis/claude"].receiving')" true
+curl -s --data-binary 'Now.' "$luis" >/dev/null
+wait "$waiting"
+check "skip several, in any case" "$(head -n -1 "$work/skipped" | jq -r .n | xargs)" 12
+check "skip from a position" "$(curl -s "$claude?after=9&skip=audio/&wait=0" | head -n -1 | jq -r .n | xargs)" "11 12"
+check "skip nothing" "$(status "$claude?skip=&wait=0")" 400
+
 check "join with no name" "$(status -X POST "$link/join")" 400
 check "bad after" "$(status "$luis?after=x")" 400
 check "no session" "$(status "$relay/v1/s/AAAAAAAAAAAAAAAAAAAAAA/join?as=luis" -X POST)" 404

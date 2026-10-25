@@ -66,6 +66,18 @@ pub struct Receive {
     pub after: Option<i64>,
     pub own: bool,
     pub presence: bool,
+    /// The starts of the types it skips, in lower case: their entries
+    /// neither end its wait nor are returned.
+    pub skip: Vec<String>,
+}
+
+impl Receive {
+    fn skips(&self, kind: &str) -> bool {
+        let kind = kind.to_ascii_lowercase();
+        self.skip
+            .iter()
+            .any(|start| kind.starts_with(start.as_str()))
+    }
 }
 
 struct Waiting {
@@ -508,11 +520,16 @@ impl Sessions {
         if !self.is_inside(session, name)? {
             return Ok(true);
         }
-        self.db
-            .prepare_cached(
-                "SELECT 1 FROM entries WHERE session = ? AND n > ? AND (? OR sender != ?)",
-            )?
-            .exists(params![session, waiting.after, waiting.receive.own, name])
+        let mut kinds = self.db.prepare_cached(
+            "SELECT type FROM entries WHERE session = ? AND n > ? AND (? OR sender != ?) ORDER BY n",
+        )?;
+        let mut rows = kinds.query(params![session, waiting.after, waiting.receive.own, name])?;
+        while let Some(row) = rows.next()? {
+            if !waiting.receive.skips(&row.get::<_, String>(0)?) {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     /// Answers `name`'s receive with the entries it asks for, and the
@@ -530,6 +547,9 @@ impl Sessions {
             )?;
             let mut rows = entries.query(params![session, after, own, name])?;
             while let Some(row) = rows.next()? {
+                if waiting.receive.skips(&row.get::<_, String>(3)?) {
+                    continue;
+                }
                 let entry = Entry {
                     n: row.get(0)?,
                     time: row.get(1)?,
@@ -545,7 +565,8 @@ impl Sessions {
             drop(rows);
             drop(entries);
             // A receive from the read position acknowledges what it returns,
-            // since its caller keeps no position of its own.
+            // and what it skips, since its caller keeps no position of its
+            // own.
             if waiting.receive.after.is_none() {
                 self.db.execute(
                     "UPDATE participants SET read = last FROM

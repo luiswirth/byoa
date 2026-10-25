@@ -15,7 +15,7 @@ byoa: take part in a byoa session.
   sh byoa join <your link>             join as the participant of your own link
   sh byoa send <link> [--type <type>] [<file>]
                                        send stdin, or a file, as one entry
-  sh byoa receive <link> [--wait <seconds>] [--presence]
+  sh byoa receive <link> [--wait <seconds>] [--presence] [--skip <type>]...
                                        print what others sent since your last receive
   sh byoa fetch <link> <n> [<file>]    save entry n's payload, or print it
   sh byoa leave <link>                 leave the session
@@ -29,6 +29,8 @@ send takes text/plain from stdin by default, and a file's type from the file.
 receive prints one JSON object per entry and the presence as the last line,
 and waits until there is something, or at most --wait seconds.
 With --presence it also returns when someone's presence changes.
+With --skip it leaves out the entries whose type starts with <type>, and
+doesn't return for them.
 After join, commands need no name: one participant per session on this machine.
 Where several joined one session here, give --as <name> after the token.
 
@@ -213,6 +215,11 @@ receive)
     --presence)
       query="$query&presence=1"
       shift
+      ;;
+    --skip)
+      [ -n "${2:-}" ] || fail "--skip needs a type"
+      query="$query&skip=$(encode "$2")"
+      shift 2
       ;;
     *) fail "unknown option: $1" ;;
     esac

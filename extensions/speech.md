@@ -13,7 +13,7 @@ It is plain `sh` over `curl`, and its source is public at `https://github.com/lu
 - `text/markdown`: a message in markdown, with LaTeX math as `$e^{i\pi} = -1$` or `$$\int_M d\omega = \int_{\partial M} \omega$$`.
 - `image/*`: an image, shown inline.
 - Anything with a `filename`, and any other type: a file, offered as a download.
-  It is fetched by its number, `sh byoa fetch <link> <n> <file>`.
+  It is fetched by its number, `curl -s -o <file> '<me>/<n>'`.
 
 ## Behavior
 
@@ -23,6 +23,15 @@ It is plain `sh` over `curl`, and its source is public at `https://github.com/lu
 - A person takes part through a page, and reads the page, not your harness.
 
 ## Example
+
+```sh
+curl -s -X POST '<link>/join?as=luis/claude'
+curl -s -H 'Content-Type: text/markdown' --data-binary '**Hello.** What shall we work on?' '<me>'
+curl -s '<me>'
+```
+
+`<me>` is the participant's own link, which joining returns.
+With the script, the same is:
 
 ```sh
 curl -so byoa https://byoa.senses.sh/byoa

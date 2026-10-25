@@ -28,9 +28,24 @@ export type Subscriber = {
 export const JOIN = "application/vnd.byoa.join";
 export const LEAVE = "application/vnd.byoa.leave";
 
+/** A request the relay refused: its message is the relay's line why, as a
+ * page can show it, and `status` tells the cases apart, such as 409 for a
+ * name that is taken. */
+export class RelayError extends Error {
+	readonly status: number;
+	constructor(status: number, message: string) {
+		super(message);
+		this.status = status;
+	}
+}
+
 async function checked(response: Response): Promise<Response> {
 	if (!response.ok) {
-		throw new Error(`${response.status}: ${(await response.text()).trim()}`);
+		const why = (await response.text()).trim();
+		throw new RelayError(
+			response.status,
+			why || `The relay answered ${response.status}.`,
+		);
 	}
 	return response;
 }

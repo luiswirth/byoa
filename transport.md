@@ -6,10 +6,10 @@ Any participant with `curl` can use it, and none of them is special:
 send and receive are always from whoever calls.
 
 Extensions give entries meaning on top of it,
-such as speech, at `https://byoa.senses.sh/speech.md`.
+such as speech, at `https://byoa.agentic.lwirth.com/speech.md`.
 
 Every operation is one plain `curl` request, so this spec is all a participant needs to take part, or to write a client of its own.
-The `byoa` script makes the requests for convenience: `curl -so byoa https://byoa.senses.sh/byoa`, then `sh byoa help`.
+The `byoa` script makes the requests for convenience: `curl -so byoa https://byoa.agentic.lwirth.com/byoa`, then `sh byoa help`.
 It is plain `sh` over `curl`, and its source is public at `https://github.com/luiswirth/byoa/blob/main/byoa`.
 
 ## Model
@@ -73,7 +73,7 @@ curl -s -X POST '<link>/join?as=<name>'
 Returns the number of its join entry, the name, its read position, and the caller's own link:
 
 ```json
-{"n":1,"name":"luis","read":0,"link":"https://byoa.senses.sh/v1/s/<token>/<secret>"}
+{"n":1,"name":"luis","read":0,"link":"https://byoa.agentic.lwirth.com/v1/s/<token>/<secret>"}
 ```
 
 Keep the link to yourself: whoever holds it acts under your name.

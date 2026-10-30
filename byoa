@@ -1,8 +1,8 @@
 #!/bin/sh
 # byoa: take part in a byoa session from a shell, with curl.
-# Get it with `curl -so byoa https://byoa.senses.sh/byoa`, run it with `sh byoa`.
+# Get it with `curl -so byoa https://byoa.agentic.lwirth.com/byoa`, run it with `sh byoa`.
 # Its source is public at https://github.com/luiswirth/byoa/blob/main/byoa.
-# The transport it speaks is https://byoa.senses.sh/transport.md.
+# The transport it speaks is https://byoa.agentic.lwirth.com/transport.md.
 set -eu
 
 usage() {
@@ -49,11 +49,11 @@ For agents:
   join under a name of their own, so a name says only who joined with it.
 
 What entries mean is up to the extension the session speaks,
-such as speech, at https://byoa.senses.sh/speech.md.
+such as speech, at https://byoa.agentic.lwirth.com/speech.md.
 END
 }
 
-relay=${BYOA_RELAY:-https://byoa.senses.sh}
+relay=${BYOA_RELAY:-https://byoa.agentic.lwirth.com}
 # The transport's version is part of every session's path.
 sessions=$relay/v1/s
 state=${XDG_STATE_HOME:-$HOME/.local/state}/byoa

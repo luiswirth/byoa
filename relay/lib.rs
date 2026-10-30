@@ -33,6 +33,9 @@ const FAILED_RECEIVE: Duration = Duration::from_secs(10);
 const PLAIN: &str = "text/plain; charset=utf-8";
 const MARKDOWN: &str = "text/markdown; charset=utf-8";
 
+// What the relay serves of this repository is compiled in: a change to any of
+// these, prose included, is served only once each relay's pin moves to it and
+// the relay restarts.
 const PEOPLE: &str = include_str!("people.html");
 const SCRIPT: &str = include_str!("../polylogue");
 const TRANSPORT: &str = include_str!("../transport.md");

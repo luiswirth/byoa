@@ -7,10 +7,10 @@ self: {
   pkgs,
   ...
 }: let
-  cfg = config.services.byoa-relay;
+  cfg = config.services.polylogue-relay;
 in {
-  options.services.byoa-relay = {
-    enable = lib.mkEnableOption "the byoa relay";
+  options.services.polylogue-relay = {
+    enable = lib.mkEnableOption "the polylogue relay";
     port = lib.mkOption {
       type = lib.types.port;
       default = 8790;
@@ -18,19 +18,19 @@ in {
     };
   };
 
-  config.systemd.services.byoa-relay = lib.mkIf cfg.enable {
-    description = "The byoa relay";
+  config.systemd.services.polylogue-relay = lib.mkIf cfg.enable {
+    description = "The polylogue relay";
     after = ["network.target"];
     wantedBy = ["multi-user.target"];
     environment = {
-      BYOA_ADDRESS = "127.0.0.1:${toString cfg.port}";
-      BYOA_DATABASE = "/var/lib/byoa-relay/relay.db";
+      POLYLOGUE_ADDRESS = "127.0.0.1:${toString cfg.port}";
+      POLYLOGUE_DATABASE = "/var/lib/polylogue-relay/relay.db";
     };
     serviceConfig = {
       ExecStart = lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.default;
       Restart = "on-failure";
       DynamicUser = true;
-      StateDirectory = "byoa-relay";
+      StateDirectory = "polylogue-relay";
       ProtectHome = true;
       PrivateDevices = true;
       ProtectClock = true;

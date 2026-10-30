@@ -1,5 +1,5 @@
 [package]
-name = "byoa-relay"
+name = "polylogue-relay"
 version = "0.1.0"
 edition = "2024"
 
@@ -7,7 +7,7 @@ edition = "2024"
 path = "relay/lib.rs"
 
 [[bin]]
-name = "byoa-relay"
+name = "polylogue-relay"
 path = "relay/main.rs"
 
 [dependencies]

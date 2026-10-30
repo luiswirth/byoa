@@ -16,8 +16,8 @@ test:
     #!/usr/bin/env bash
     set -euo pipefail
     cargo build --quiet
-    BYOA_ADDRESS=127.0.0.1:8791 "${CARGO_TARGET_DIR:-target}/debug/byoa-relay" &
+    POLYLOGUE_ADDRESS=127.0.0.1:8791 "${CARGO_TARGET_DIR:-target}/debug/polylogue-relay" &
     trap 'kill $!' EXIT
     tests/transport.sh http://localhost:8791
-    sh tests/byoa.sh http://localhost:8791
+    sh tests/polylogue.sh http://localhost:8791
     node tests/secrets.ts

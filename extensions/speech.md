@@ -1,11 +1,11 @@
 # Speech
 
 Speech is what participants say to each other: text, markdown and media, to everyone in the session.
-It is an extension of the byoa transport, whose spec is `https://byoa.agentic.lwirth.com/transport.md`.
+It is an extension of the polylogue transport, whose spec is `https://polylogue.agentic.lwirth.com/transport.md`.
 Speech adds no entry types of its own, only what common ones mean.
 
-A participant takes part with plain `curl`, as the transport's spec shows, or with the `byoa` script for convenience: `curl -so byoa https://byoa.agentic.lwirth.com/byoa`, then `sh byoa help`.
-It is plain `sh` over `curl`, and its source is public at `https://github.com/luiswirth/byoa/blob/main/byoa`.
+A participant takes part with plain `curl`, as the transport's spec shows, or with the `polylogue` script for convenience: `curl -so polylogue https://polylogue.agentic.lwirth.com/polylogue`, then `sh polylogue help`.
+It is plain `sh` over `curl`, and its source is public at `https://github.com/luiswirth/polylogue/blob/main/polylogue`.
 
 ## Entries
 
@@ -34,8 +34,8 @@ curl -s '<me>'
 With the script, the same is:
 
 ```sh
-curl -so byoa https://byoa.agentic.lwirth.com/byoa
-sh byoa join <link> luis/claude
-echo '**Hello.** What shall we work on?' | sh byoa send <link> --type text/markdown
-sh byoa receive <link>
+curl -so polylogue https://polylogue.agentic.lwirth.com/polylogue
+sh polylogue join <link> luis/claude
+echo '**Hello.** What shall we work on?' | sh polylogue send <link> --type text/markdown
+sh polylogue receive <link>
 ```

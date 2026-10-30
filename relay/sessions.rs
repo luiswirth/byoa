@@ -16,8 +16,8 @@ pub const MAX_NAME: usize = 256;
 const MAX_INLINE: usize = 64 * 1024;
 /// How long a session lasts with nobody using it, receiving included, in seconds.
 const IDLE: i64 = 24 * 60 * 60;
-const JOIN: &str = "application/vnd.byoa.join";
-const LEAVE: &str = "application/vnd.byoa.leave";
+const JOIN: &str = "application/vnd.polylogue.join";
+const LEAVE: &str = "application/vnd.polylogue.leave";
 
 const SCHEMA: &str = "
     PRAGMA journal_mode = WAL;

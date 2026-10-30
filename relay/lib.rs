@@ -1,4 +1,4 @@
-//! The byoa relay: the transport that `transport.md` specifies, over plain
+//! The polylogue relay: the transport that `transport.md` specifies, over plain
 //! HTTP, with every session in one SQLite database.
 
 mod sessions;
@@ -34,7 +34,7 @@ const PLAIN: &str = "text/plain; charset=utf-8";
 const MARKDOWN: &str = "text/markdown; charset=utf-8";
 
 const PEOPLE: &str = include_str!("people.html");
-const SCRIPT: &str = include_str!("../byoa");
+const SCRIPT: &str = include_str!("../polylogue");
 const TRANSPORT: &str = include_str!("../transport.md");
 const SPEECH: &str = include_str!("../extensions/speech.md");
 
@@ -202,8 +202,8 @@ fn gone(origin: &str) -> Fail {
     fail(
         410,
         format!(
-            "byoa changed to {VERSION}, and this request is from an older client: \
-             the spec is at {origin}/transport.md, and the script at {origin}/byoa"
+            "polylogue changed to {VERSION}, and this request is from an older client: \
+             the spec is at {origin}/transport.md, and the script at {origin}/polylogue"
         ),
     )
 }
@@ -216,7 +216,7 @@ async fn route(relay: &Relay, request: Request) -> Result<Response, Fail> {
     let get = parts.method == Method::GET;
     match segments.as_slice() {
         [""] if get => Ok(text(PEOPLE, "text/html; charset=utf-8")),
-        ["byoa"] if get => Ok(text(SCRIPT, PLAIN)),
+        ["polylogue"] if get => Ok(text(SCRIPT, PLAIN)),
         ["transport.md"] if get => Ok(text(TRANSPORT, MARKDOWN)),
         ["speech.md"] if get => Ok(text(SPEECH, MARKDOWN)),
         ["s", ..] => Err(gone(&origin)),

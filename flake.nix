@@ -38,19 +38,19 @@
           cargo = rust pkgs;
           rustc = rust pkgs;
         }).buildRustPackage {
-          pname = "byoa-relay";
+          pname = "polylogue-relay";
           version = "0.1.0";
           src = pkgs.lib.fileset.toSource {
             root = ./.;
-            fileset = pkgs.lib.fileset.unions [./Cargo.toml ./Cargo.lock ./relay ./byoa ./transport.md ./extensions];
+            fileset = pkgs.lib.fileset.unions [./Cargo.toml ./Cargo.lock ./relay ./polylogue ./transport.md ./extensions];
           };
           cargoLock.lockFile = ./Cargo.lock;
           # The binary names the toolchain's sources, in panic messages, which
           # would pull all of it into whatever runs the relay.
           nativeBuildInputs = [pkgs.removeReferencesTo];
-          postFixup = "remove-references-to -t ${rust pkgs} $out/bin/byoa-relay";
+          postFixup = "remove-references-to -t ${rust pkgs} $out/bin/polylogue-relay";
           disallowedReferences = [(rust pkgs)];
-          meta.mainProgram = "byoa-relay";
+          meta.mainProgram = "polylogue-relay";
         };
     });
 
@@ -76,9 +76,9 @@
         # direnv reads it, no shell runs it.
         settings.formatter.shellcheck.excludes = [".envrc"];
         programs.shfmt.enable = true;
-        # The script has no extension, since it is run as `sh byoa`.
-        settings.formatter.shellcheck.includes = ["*.sh" "byoa"];
-        settings.formatter.shfmt.includes = ["*.sh" "byoa"];
+        # The script has no extension, since it is run as `sh polylogue`.
+        settings.formatter.shellcheck.includes = ["*.sh" "polylogue"];
+        settings.formatter.shfmt.includes = ["*.sh" "polylogue"];
       });
 
     devShells = forEachSystem (pkgs: {

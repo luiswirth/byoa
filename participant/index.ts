@@ -1,4 +1,4 @@
-/** A participant's side of a byoa session, as `transport.md` describes it, for
+/** A participant's side of a polylogue session, as `transport.md` describes it, for
  * a page or a script. One `Session` per participant: it owns its one receive,
  * and hands every entry and every change of presence to all who subscribed. */
 
@@ -25,8 +25,8 @@ export type Subscriber = {
 	end?(why: string): void;
 };
 
-export const JOIN = "application/vnd.byoa.join";
-export const LEAVE = "application/vnd.byoa.leave";
+export const JOIN = "application/vnd.polylogue.join";
+export const LEAVE = "application/vnd.polylogue.leave";
 
 /** A request the relay refused: its message is the relay's line why, as a
  * page can show it, and `status` tells the cases apart, such as 409 for a
@@ -213,8 +213,8 @@ export class Session {
 	}
 }
 
-export const KEY = "application/vnd.byoa.key";
-export const SECRET = "application/vnd.byoa.secret+json";
+export const KEY = "application/vnd.polylogue.key";
+export const SECRET = "application/vnd.polylogue.secret+json";
 
 const OAEP = { name: "RSA-OAEP", hash: "SHA-256" } as const;
 

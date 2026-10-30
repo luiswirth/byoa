@@ -33,7 +33,7 @@ for _ in $(seq 60); do
   sleep 0.5
 done
 
-check "the spec at /transport.md" "$(curl -s "$relay/transport.md" | head -1)" "# The byoa transport"
+check "the spec at /transport.md" "$(curl -s "$relay/transport.md" | head -1)" "# The polylogue transport"
 check "speech at /speech.md" "$(curl -s "$relay/speech.md" | head -1)" "# Speech"
 
 link=$(curl -s -X POST "$relay/v1/s")
@@ -110,11 +110,11 @@ check "a name stays taken" "$(status -X POST "$link/join?as=luis/claude")" 409
 check "rejoin" "$(curl -s -X POST "$claude/join" | jq -c '[.n, .read, .link == "'"$claude"'"]')" '[8,6,true]'
 check "read position kept" "$(curl -s "$claude?after=0&wait=0" | tail -1 | jq '.presence["luis/claude"].read')" 6
 
-trace='application/vnd.byoa.voice.trace+json'
+trace='application/vnd.polylogue.voice.trace+json'
 curl -s -H "Content-Type: $trace" --data-binary '[]' "$luis" >/dev/null
-check "a skipped entry neither returns nor wakes" "$(curl -s "$claude?skip=application/vnd.byoa.voice.trace&wait=1" | jq -c 'keys')" '["presence"]'
+check "a skipped entry neither returns nor wakes" "$(curl -s "$claude?skip=application/vnd.polylogue.voice.trace&wait=1" | jq -c 'keys')" '["presence"]'
 check "a skipped entry is acknowledged" "$(curl -s "$luis?wait=0" | tail -1 | jq '.presence["luis/claude"].read')" 9
-curl -s "$claude?skip=audio/&skip=Application/VND.byoa.voice.trace" >"$work/skipped" &
+curl -s "$claude?skip=audio/&skip=Application/VND.polylogue.voice.trace" >"$work/skipped" &
 waiting=$!
 until_receiving "$luis?after=0&wait=0" luis/claude
 curl -s -H 'Content-Type: audio/wav' --data-binary 'RIFF' "$luis?filename=heard.wav" >/dev/null

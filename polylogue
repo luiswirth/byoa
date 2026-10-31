@@ -15,7 +15,8 @@ polylogue: take part in a polylogue session.
   sh polylogue join <your link>             join as the participant of your own link
   sh polylogue send <link> [--type <type>] [<file>]
                                        send stdin, or a file, as one entry
-  sh polylogue receive <link> [--wait <seconds>] [--presence] [--skip <type>]...
+  sh polylogue receive <link> [--wait <seconds>] [--presence]
+                       [--only <type>]... [--skip <type>]...
                                        print what others sent since your last receive
   sh polylogue fetch <link> <n> [<file>]    save entry n's payload, or print it
   sh polylogue leave <link>                 leave the session
@@ -29,8 +30,9 @@ send takes text/plain from stdin by default, and a file's type from the file.
 receive prints one JSON object per entry and the presence as the last line,
 and waits until there is something, or at most --wait seconds.
 With --presence it also returns when someone's presence changes.
-With --skip it leaves out the entries whose type starts with <type>, and
-doesn't return for them.
+With --only it returns only the entries whose type starts with some <type>,
+and with --skip it leaves out those whose type starts with <type>: it
+doesn't return for what it leaves out.
 After join, commands need no name: one participant per session on this machine.
 Where several joined one session here, give --as <name> after the token.
 
@@ -216,9 +218,9 @@ receive)
       query="$query&presence=1"
       shift
       ;;
-    --skip)
-      [ -n "${2:-}" ] || fail "--skip needs a type"
-      query="$query&skip=$(encode "$2")"
+    --only | --skip)
+      [ -n "${2:-}" ] || fail "$1 needs a type"
+      query="$query&${1#--}=$(encode "$2")"
       shift 2
       ;;
     *) fail "unknown option: $1" ;;

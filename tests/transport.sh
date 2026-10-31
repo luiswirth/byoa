@@ -126,11 +126,24 @@ check "skip several, in any case" "$(head -n -1 "$work/skipped" | jq -r .n | xar
 check "skip from a position" "$(curl -s "$claude?after=9&skip=audio/&wait=0" | head -n -1 | jq -r .n | xargs)" "11 12"
 check "skip nothing" "$(status "$claude?skip=&wait=0")" 400
 
+voice='only=application/vnd.polylogue.voice.&skip=application/vnd.polylogue.voice.trace'
+curl -s "$claude?$voice" >"$work/only" &
+waiting=$!
+until_receiving "$luis?after=0&wait=0" luis/claude
+curl -s -H "Content-Type: $trace" --data-binary '[]' "$luis" >/dev/null
+curl -s --data-binary 'Later.' "$luis" >/dev/null
+check "what only leaves out doesn't wake" "$(curl -s "$luis?wait=0" | tail -1 | jq '.presence["luis/claude"].receiving')" true
+curl -s -H 'Content-Type: application/vnd.polylogue.voice.tier+json' --data-binary '{}' "$luis" >/dev/null
+wait "$waiting"
+check "only and skip combine" "$(head -n -1 "$work/only" | jq -r .n | xargs)" 15
+check "only several, in any case" "$(curl -s "$claude?after=9&only=audio/&only=TEXT/&wait=0" | head -n -1 | jq -r .n | xargs)" "10 12 14"
+check "only nothing" "$(status "$claude?only=&wait=0")" 400
+
 # The observer looks without stirring: from position 0, for presence.
 observer=$(curl -s -X POST "$link/join?as=observer" | jq -r .link)
-curl -s "$luis?after=13&own=1" >/dev/null &
+curl -s "$luis?after=16&own=1" >/dev/null &
 paged=$!
-curl -s "$claude?after=13" >"$work/answered" &
+curl -s "$claude?after=16" >"$work/answered" &
 waiting=$!
 until_receiving "$observer?after=0&presence=1&wait=0" luis
 until_receiving "$observer?after=0&presence=1&wait=0" luis/claude

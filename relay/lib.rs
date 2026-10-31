@@ -356,18 +356,22 @@ async fn receive(relay: &Relay, id: &str, secret: &str, query: &str) -> Result<R
         },
     };
     let flag = |key| param(query, key).is_some_and(|value| value == "1");
-    let skip = form_urlencoded::parse(query.as_bytes())
-        .filter(|(key, _)| key == "skip")
-        .map(|(_, kind)| kind.to_ascii_lowercase())
-        .collect::<Vec<_>>();
-    if skip.iter().any(String::is_empty) {
-        return Err(fail(400, "skip is a type, or the start of one"));
-    }
+    let types = |name: &str| {
+        let starts = form_urlencoded::parse(query.as_bytes())
+            .filter(|(key, _)| key == name)
+            .map(|(_, kind)| kind.to_ascii_lowercase())
+            .collect::<Vec<_>>();
+        match starts.iter().any(String::is_empty) {
+            true => Err(fail(400, format!("{name} is a type, or the start of one"))),
+            false => Ok(starts),
+        }
+    };
     let receive = Receive {
         after,
         own: flag("own"),
         presence: flag("presence"),
-        skip,
+        only: types("only")?,
+        skip: types("skip")?,
     };
     let (ticket, mut answered) = relay.sessions().receive(id, secret, receive)?;
     let waiting = Waiting { relay, ticket };

@@ -56,11 +56,13 @@ check "leave the own link" "$(luis leave "$token" --as other)" '{"n":11}'
 claude receive "$token" --as luis/claude --wait 0 >/dev/null
 echo '[]' | luis send "$token" --as 'Luis W.' --type application/vnd.polylogue.voice.trace+json >/dev/null
 check "receive --skip" "$(claude receive "$token" --as luis/claude --skip application/vnd.polylogue.voice.trace --wait 0 | wc -l | tr -d ' ')" 1
+echo '[]' | luis send "$token" --as 'Luis W.' --type application/vnd.polylogue.voice.trace+json >/dev/null
+check "receive --only" "$(claude receive "$token" --as luis/claude --only text/ --wait 0 | wc -l | tr -d ' ')" 1
 
 check "no session" "$(luis join AAAAAAAAAAAAAAAAAAAAAA x 2>&1)" "polylogue: no such session"
 check "not joined" "$(luis send "$(curl -s -X POST "$relay/v1/s")" </dev/null 2>&1)" "polylogue: not joined: sh polylogue join <link> <name>"
 check "several here need --as" "$(claude leave "$token" 2>&1)" "polylogue: several joined this session here: give --as <name>"
-check "leave" "$(claude leave "$token" --as luis/claude)" '{"n":13}'
+check "leave" "$(claude leave "$token" --as luis/claude)" '{"n":14}'
 check "left" "$(claude receive "$token" --as luis/claude 2>&1)" "polylogue: you have left: join again with POST <your link>/join"
 luis leave "$token" --as "Luis W." >/dev/null
 

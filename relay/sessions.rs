@@ -66,17 +66,21 @@ pub struct Receive {
     pub after: Option<i64>,
     pub own: bool,
     pub presence: bool,
-    /// The starts of the types it skips, in lower case: their entries
-    /// neither end its wait nor are returned.
+    /// The starts of the types it asks for, in lower case; with none, every
+    /// type.
+    pub only: Vec<String>,
+    /// The starts of the types it skips, in lower case.
     pub skip: Vec<String>,
 }
 
 impl Receive {
-    fn skips(&self, kind: &str) -> bool {
+    /// Whether entries of `kind` are returned, and end its wait: the rest
+    /// do neither.
+    fn wants(&self, kind: &str) -> bool {
         let kind = kind.to_ascii_lowercase();
-        self.skip
-            .iter()
-            .any(|start| kind.starts_with(start.as_str()))
+        let matches =
+            |starts: &[String]| starts.iter().any(|start| kind.starts_with(start.as_str()));
+        (self.only.is_empty() || matches(&self.only)) && !matches(&self.skip)
     }
 }
 
@@ -525,7 +529,7 @@ impl Sessions {
         )?;
         let mut rows = kinds.query(params![session, waiting.after, waiting.receive.own, name])?;
         while let Some(row) = rows.next()? {
-            if !waiting.receive.skips(&row.get::<_, String>(0)?) {
+            if waiting.receive.wants(&row.get::<_, String>(0)?) {
                 return Ok(true);
             }
         }
@@ -579,7 +583,7 @@ impl Sessions {
             )?;
             let mut rows = entries.query(params![session, after, own, name])?;
             while let Some(row) = rows.next()? {
-                if waiting.receive.skips(&row.get::<_, String>(3)?) {
+                if !waiting.receive.wants(&row.get::<_, String>(3)?) {
                     continue;
                 }
                 let entry = Entry {
@@ -597,7 +601,7 @@ impl Sessions {
             drop(rows);
             drop(entries);
             // A receive from the read position acknowledges what it returns,
-            // and what it skips, since its caller keeps no position of its
+            // and what it leaves out, since its caller keeps no position of its
             // own.
             if waiting.receive.after.is_none() {
                 self.db.execute(
